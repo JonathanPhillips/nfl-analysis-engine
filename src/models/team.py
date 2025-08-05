@@ -34,6 +34,9 @@ class TeamModel(SQLBaseModel):
     team_city = Column(String(50))
     team_wordmark = Column(String(255))
     
+    # Relationships
+    players = relationship("PlayerModel", back_populates="team")
+    
     def __repr__(self):
         return f"<Team {self.team_abbr}: {self.team_name} {self.team_nick}>"
 
