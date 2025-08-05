@@ -55,6 +55,7 @@ class GameModel(SQLBaseModel):
     # Relationships
     home_team_rel = relationship("TeamModel", foreign_keys=[home_team], back_populates="home_games")
     away_team_rel = relationship("TeamModel", foreign_keys=[away_team], back_populates="away_games")
+    plays = relationship("PlayModel", back_populates="game")
     
     def __repr__(self):
         return f"<Game {self.game_id}: {self.away_team} @ {self.home_team} ({self.game_date})>"
