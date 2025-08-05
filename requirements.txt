@@ -4,6 +4,7 @@ pytest-mock
 requests
 beautifulsoup4
 sqlalchemy
+alembic
 fastapi
 uvicorn
 pydantic
