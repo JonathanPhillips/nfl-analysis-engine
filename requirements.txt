@@ -1,0 +1,11 @@
+pytest
+pytest-cov
+pytest-mock
+requests
+beautifulsoup4
+sqlalchemy
+fastapi
+uvicorn
+pydantic
+python-dotenv
+schedule
