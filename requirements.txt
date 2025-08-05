@@ -9,3 +9,8 @@ uvicorn
 pydantic
 python-dotenv
 schedule
+nfl_data_py
+pandas
+numpy
+scikit-learn
+psycopg2-binary
