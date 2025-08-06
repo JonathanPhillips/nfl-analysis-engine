@@ -179,8 +179,8 @@ class TestDatabaseManager:
     
     def test_test_connection_failure(self):
         """Test connection test failure."""
-        # Create manager with invalid database URL
-        bad_engine = create_engine("postgresql://invalid:invalid@nonexistent:5432/invalid")
+        # Create manager with invalid SQLite database URL to avoid psycopg2 dependency
+        bad_engine = create_engine("sqlite:///nonexistent_directory/invalid.db")
         manager = DatabaseManager(bad_engine)
         
         result = manager.test_connection()

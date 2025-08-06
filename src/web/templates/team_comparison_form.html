@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Team Comparison - NFL Analysis Engine{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-balance-scale text-success me-3"></i>
+            Team Comparison
+        </h1>
+        <p class="lead text-muted">
+            Compare two teams using advanced metrics and situational performance data.
+        </p>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-lg">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-arrows-alt-h me-2"></i>
+                    Select Teams to Compare
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="/web/insights/compare">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label for="team1" class="form-label">
+                                <i class="fas fa-home me-2"></i>Team 1
+                            </label>
+                            <select name="team1" id="team1" class="form-select form-select-lg" required>
+                                <option value="">Choose first team...</option>
+                                {% for team in teams %}
+                                <option value="{{ team.team_abbr }}">
+                                    {{ team.team_name }} {{ team.team_nick }} ({{ team.team_abbr }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="team2" class="form-label">
+                                <i class="fas fa-users me-2"></i>Team 2
+                            </label>
+                            <select name="team2" id="team2" class="form-select form-select-lg" required>
+                                <option value="">Choose second team...</option>
+                                {% for team in teams %}
+                                <option value="{{ team.team_abbr }}">
+                                    {{ team.team_name }} {{ team.team_nick }} ({{ team.team_abbr }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label for="season" class="form-label">
+                                <i class="fas fa-calendar-alt me-2"></i>Season
+                            </label>
+                            <select name="season" id="season" class="form-select form-select-lg" required>
+                                <option value="">Choose season...</option>
+                                {% for season in available_seasons %}
+                                <option value="{{ season }}">{{ season }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 d-flex align-items-end">
+                            <button type="submit" class="btn btn-success btn-lg w-100">
+                                <i class="fas fa-chart-bar me-2"></i>
+                                Compare Teams
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Comparison Metrics Overview -->
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    What We Compare
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <h6 class="text-info">
+                            <i class="fas fa-arrow-up me-2"></i>Offensive Metrics
+                        </h6>
+                        <ul class="list-unstyled text-muted small">
+                            <li><i class="fas fa-check-circle text-success me-2"></i>EPA per Play</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Red Zone Efficiency</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Third Down Rate</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Pass vs Rush Balance</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <h6 class="text-info">
+                            <i class="fas fa-shield-alt me-2"></i>Defensive Metrics
+                        </h6>
+                        <ul class="list-unstyled text-muted small">
+                            <li><i class="fas fa-check-circle text-success me-2"></i>EPA Allowed</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Red Zone Defense</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Third Down Defense</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Pass vs Run Defense</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <h6 class="text-info">
+                            <i class="fas fa-clock me-2"></i>Situational
+                        </h6>
+                        <ul class="list-unstyled text-muted small">
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Clutch Performance</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Two-Minute Drill</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Home/Away Splits</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Season Trends</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Prevent selecting the same team twice
+    const team1Select = document.getElementById('team1');
+    const team2Select = document.getElementById('team2');
+    
+    function updateAvailableOptions() {
+        const team1Value = team1Select.value;
+        const team2Value = team2Select.value;
+        
+        // Reset all options to enabled
+        Array.from(team1Select.options).forEach(option => option.disabled = false);
+        Array.from(team2Select.options).forEach(option => option.disabled = false);
+        
+        // Disable selected team in the other dropdown
+        if (team1Value) {
+            Array.from(team2Select.options).forEach(option => {
+                if (option.value === team1Value) option.disabled = true;
+            });
+        }
+        
+        if (team2Value) {
+            Array.from(team1Select.options).forEach(option => {
+                if (option.value === team2Value) option.disabled = true;
+            });
+        }
+    }
+    
+    team1Select.addEventListener('change', updateAvailableOptions);
+    team2Select.addEventListener('change', updateAvailableOptions);
+});
+</script>
+{% endblock %}

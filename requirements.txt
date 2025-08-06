@@ -8,6 +8,8 @@ alembic
 fastapi
 uvicorn
 pydantic
+jinja2
+python-multipart
 python-dotenv
 schedule
 nfl_data_py

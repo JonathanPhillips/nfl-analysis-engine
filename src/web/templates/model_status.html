@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Model Status - NFL Analysis Engine{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="fas fa-cog me-3"></i>Model Status & Training
+    </h1>
+    {% if model_trained %}
+        <span class="badge bg-success fs-6">
+            <i class="fas fa-check-circle me-1"></i>Model Trained
+        </span>
+    {% else %}
+        <span class="badge bg-warning fs-6">
+            <i class="fas fa-exclamation-triangle me-1"></i>Model Not Trained
+        </span>
+    {% endif %}
+</div>
+
+<!-- Model Status Card -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header {% if model_trained %}bg-success{% else %}bg-warning{% endif %} text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Current Status
+                </h4>
+            </div>
+            <div class="card-body">
+                {% if model_trained %}
+                    <div class="alert alert-success">
+                        <h5 class="alert-heading">
+                            <i class="fas fa-check-circle me-2"></i>Model Ready
+                        </h5>
+                        <p class="mb-0">The NFL prediction model is trained and ready to make predictions.</p>
+                    </div>
+                    
+                    <!-- Training Metrics -->
+                    {% if training_metrics and validation_metrics %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-chart-line me-2"></i>Training Metrics</h5>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <tbody>
+                                        <tr>
+                                            <td>Accuracy</td>
+                                            <td><strong>{{ (training_metrics.accuracy * 100)|round(2) }}%</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Precision</td>
+                                            <td>{{ (training_metrics.precision * 100)|round(2) }}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Recall</td>
+                                            <td>{{ (training_metrics.recall * 100)|round(2) }}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>F1 Score</td>
+                                            <td>{{ (training_metrics.f1_score * 100)|round(2) }}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Samples</td>
+                                            <td>{{ training_metrics.samples }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-chart-bar me-2"></i>Validation Metrics</h5>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <tbody>
+                                        <tr>
+                                            <td>Accuracy</td>
+                                            <td><strong>{{ (validation_metrics.accuracy * 100)|round(2) }}%</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Precision</td>
+                                            <td>{{ (validation_metrics.precision * 100)|round(2) }}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Recall</td>
+                                            <td>{{ (validation_metrics.recall * 100)|round(2) }}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>F1 Score</td>
+                                            <td>{{ (validation_metrics.f1_score * 100)|round(2) }}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Samples</td>
+                                            <td>{{ validation_metrics.samples }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Feature Importance -->
+                    {% if feature_importance %}
+                    <div class="mt-4">
+                        <h5><i class="fas fa-star me-2"></i>Top Prediction Features</h5>
+                        <div class="row">
+                            {% for feature, importance in feature_importance.items() %}
+                            <div class="col-md-6 mb-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>{{ feature.replace('_', ' ').title() }}</span>
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress me-2" style="width: 100px; height: 8px;">
+                                            <div class="progress-bar bg-info" role="progressbar" 
+                                                 style="width: {{ (importance * 100)|round(1) }}%"></div>
+                                        </div>
+                                        <small class="text-muted">{{ (importance * 100)|round(1) }}%</small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                {% else %}
+                    <div class="alert alert-warning">
+                        <h5 class="alert-heading">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Model Not Trained
+                        </h5>
+                        <p>You need to train the machine learning model before you can make predictions.</p>
+                        <p class="mb-0">Use the training form below to train the model on historical NFL data.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Training Form -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-dumbbell me-2"></i>Train Model
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="post" action="/web/train-model">
+                    <div class="mb-3">
+                        <label for="seasons" class="form-label">
+                            <i class="fas fa-calendar-alt me-1"></i>Training Seasons
+                        </label>
+                        <input type="text" class="form-control" id="seasons" name="seasons" 
+                               placeholder="2020,2021,2022,2023" required
+                               value="{% if available_seasons %}{{ available_seasons[:4]|join(',') }}{% endif %}">
+                        <div class="form-text">
+                            Enter comma-separated years. More seasons = better model but longer training time.
+                            {% if available_seasons %}
+                                <br>Available seasons: {{ available_seasons|join(', ') }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="test_size" class="form-label">
+                            <i class="fas fa-chart-pie me-1"></i>Test Size
+                        </label>
+                        <input type="number" class="form-control" id="test_size" name="test_size" 
+                               min="0.1" max="0.5" step="0.05" value="0.2" required>
+                        <div class="form-text">
+                            Fraction of data to use for validation (0.1 to 0.5). Recommended: 0.2 (20%)
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-info-circle me-2"></i>Training Information
+                        </h6>
+                        <ul class="mb-0">
+                            <li><strong>Duration:</strong> Training may take 1-5 minutes depending on data size</li>
+                            <li><strong>Features:</strong> Uses 30+ engineered features including team stats, head-to-head records, and recent form</li>
+                            <li><strong>Algorithm:</strong> Random Forest Classifier optimized for NFL game prediction</li>
+                            <li><strong>Validation:</strong> Includes train/test split to prevent overfitting</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-dumbbell me-2"></i>Start Training
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Training Tips
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6><i class="fas fa-clock me-2"></i>Optimal Seasons</h6>
+                    <p class="small mb-2">Use 3-4 recent seasons for best results. More data improves accuracy but increases training time.</p>
+                </div>
+                
+                <div class="mb-3">
+                    <h6><i class="fas fa-balance-scale me-2"></i>Test Size</h6>
+                    <p class="small mb-2">20% (0.2) is recommended. Higher values give more reliable validation but less training data.</p>
+                </div>
+                
+                <div class="mb-3">
+                    <h6><i class="fas fa-tachometer-alt me-2"></i>Performance</h6>
+                    <p class="small mb-0">Target accuracy: 55-65% (better than coin flip). High precision/recall indicates reliable predictions.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

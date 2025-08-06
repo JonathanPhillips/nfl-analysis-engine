@@ -1,0 +1,23 @@
+name: "NFL Analysis Engine CodeQL Config"
+
+disable-default-queries: false
+
+queries:
+  - uses: security-and-quality
+  - uses: security-extended
+
+paths-ignore:
+  - tests/
+  - migrations/versions/
+  - .venv/
+  - venv/
+  - htmlcov/
+  
+paths:
+  - src/
+
+query-filters:
+  - exclude:
+      id: py/unused-import
+  - exclude:
+      id: py/similar-function

@@ -338,8 +338,8 @@ class TestMigrationManagerErrorHandling:
     
     def test_get_current_revision_error(self):
         """Test error handling in get_current_revision."""
-        # Create engine that will fail
-        engine = create_engine("postgresql://invalid:invalid@nonexistent:5432/invalid")
+        # Create engine that will fail (use SQLite to avoid psycopg2 dependency)
+        engine = create_engine("sqlite:///nonexistent_directory/invalid.db")
         
         temp_dir = tempfile.mkdtemp()
         try:
@@ -377,7 +377,7 @@ class TestMigrationManagerErrorHandling:
     
     def test_get_migration_status_error(self):
         """Test error handling in get_migration_status."""
-        engine = create_engine("postgresql://invalid:invalid@nonexistent:5432/invalid")
+        engine = create_engine("sqlite:///nonexistent_directory/invalid.db")
         
         temp_dir = tempfile.mkdtemp()
         try:
@@ -389,10 +389,13 @@ class TestMigrationManagerErrorHandling:
                 mock_path.return_value.parent.parent.parent = temp_project
                 
                 manager = MigrationManager(engine)
-                status = manager.get_migration_status()
                 
-                assert 'error' in status
-                assert status['current_revision'] is None
-                assert status['up_to_date'] is False
+                # Mock get_current_revision to raise an exception to trigger top-level error handling
+                with patch.object(manager, 'get_current_revision', side_effect=Exception("Test error")):
+                    status = manager.get_migration_status()
+                    
+                    assert 'error' in status
+                    assert status['current_revision'] is None
+                    assert status['up_to_date'] is False
         finally:
             shutil.rmtree(temp_dir)

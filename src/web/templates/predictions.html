@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}Predictions - NFL Analysis Engine{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="fas fa-crystal-ball me-3"></i>Game Predictions
+    </h1>
+    <a href="/web/predict" class="btn btn-primary">
+        <i class="fas fa-magic me-2"></i>Predict Custom Game
+    </a>
+</div>
+
+{% if not model_trained %}
+    <div class="alert alert-warning" role="alert">
+        <h4 class="alert-heading">
+            <i class="fas fa-exclamation-triangle me-2"></i>Model Not Trained
+        </h4>
+        <p>The prediction model has not been trained yet. You need to train the model before generating predictions.</p>
+        <hr>
+        <a href="/web/model" class="btn btn-warning">
+            <i class="fas fa-cog me-2"></i>Go to Model Training
+        </a>
+    </div>
+{% elif not predictions %}
+    <div class="alert alert-info" role="alert">
+        <h4 class="alert-heading">
+            <i class="fas fa-info-circle me-2"></i>No Upcoming Games
+        </h4>
+        <p class="mb-0">There are no upcoming games in the next 2 weeks to generate predictions for.</p>
+    </div>
+{% else %}
+    <div class="row">
+        {% for pred_data in predictions %}
+            {% set game = pred_data.game %}
+            {% set prediction = pred_data.prediction %}
+            
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100 prediction-card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                <i class="fas fa-calendar me-1"></i>
+                                {{ game.game_date.strftime('%m/%d') }}
+                            </h6>
+                            {% if game.week %}
+                                <span class="badge bg-light text-dark">Week {{ game.week }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="card-body">
+                        <!-- Matchup -->
+                        <div class="text-center mb-3">
+                            <div class="d-flex justify-content-center align-items-center">
+                                <div class="text-center">
+                                    <div class="team-logo mb-1">{{ game.away_team }}</div>
+                                    <small>{{ game.away_team }}</small>
+                                </div>
+                                <div class="mx-3">
+                                    <h5 class="mb-0">@</h5>
+                                </div>
+                                <div class="text-center">
+                                    <div class="team-logo mb-1">{{ game.home_team }}</div>
+                                    <small>{{ game.home_team }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Prediction Result -->
+                        <div class="text-center mb-3">
+                            <h5 class="text-success mb-1">
+                                <i class="fas fa-trophy me-1"></i>
+                                {{ prediction.predicted_winner }}
+                            </h5>
+                            <div class="mb-2">
+                                <span class="badge bg-success fs-6">
+                                    {{ (prediction.win_probability * 100)|round(1) }}% to win
+                                </span>
+                            </div>
+                            
+                            <!-- Win Probabilities -->
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <small class="text-muted">{{ game.home_team }}</small>
+                                        <div class="progress" style="height: 6px;">
+                                            <div class="progress-bar bg-primary" role="progressbar" 
+                                                 style="width: {{ (prediction.home_win_prob * 100)|round(1) }}%"></div>
+                                        </div>
+                                        <small><strong>{{ (prediction.home_win_prob * 100)|round(1) }}%</strong></small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <small class="text-muted">{{ game.away_team }}</small>
+                                        <div class="progress" style="height: 6px;">
+                                            <div class="progress-bar bg-warning" role="progressbar" 
+                                                 style="width: {{ (prediction.away_win_prob * 100)|round(1) }}%"></div>
+                                        </div>
+                                        <small><strong>{{ (prediction.away_win_prob * 100)|round(1) }}%</strong></small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Confidence -->
+                        <div class="text-center">
+                            <small class="text-muted">Confidence:</small>
+                            <div class="progress mb-1" style="height: 8px;">
+                                <div class="progress-bar 
+                                    {% if prediction.confidence > 0.7 %}bg-success
+                                    {% elif prediction.confidence > 0.4 %}bg-warning
+                                    {% else %}bg-danger{% endif %}" 
+                                     role="progressbar" 
+                                     style="width: {{ (prediction.confidence * 100)|round(1) }}%"></div>
+                            </div>
+                            <small class="
+                                {% if prediction.confidence > 0.7 %}text-success
+                                {% elif prediction.confidence > 0.4 %}text-warning
+                                {% else %}text-danger{% endif %}">
+                                <strong>{{ (prediction.confidence * 100)|round(1) }}%</strong>
+                                {% if prediction.confidence > 0.7 %}High
+                                {% elif prediction.confidence > 0.4 %}Medium
+                                {% else %}Low{% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Summary Stats -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Prediction Summary
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <h4 class="text-primary">{{ predictions|length }}</h4>
+                            <small class="text-muted">Total Predictions</small>
+                        </div>
+                        <div class="col-md-3">
+                            {% set high_confidence = predictions|selectattr('prediction.confidence', '>', 0.7)|list|length %}
+                            <h4 class="text-success">{{ high_confidence }}</h4>
+                            <small class="text-muted">High Confidence</small>
+                        </div>
+                        <div class="col-md-3">
+                            {% set avg_confidence = (predictions|map(attribute='prediction.confidence')|sum / predictions|length * 100)|round(1) %}
+                            <h4 class="text-info">{{ avg_confidence }}%</h4>
+                            <small class="text-muted">Avg Confidence</small>
+                        </div>
+                        <div class="col-md-3">
+                            {% set home_favorites = predictions|selectattr('prediction.home_win_prob', '>', 0.5)|list|length %}
+                            <h4 class="text-warning">{{ home_favorites }}</h4>
+                            <small class="text-muted">Home Favorites</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<style>
+.prediction-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+}
+
+.prediction-card .card-header {
+    background: rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.prediction-card .team-logo {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 12px;
+    backdrop-filter: blur(10px);
+}
+
+.prediction-card .progress {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.prediction-card small {
+    color: rgba(255, 255, 255, 0.8);
+}
+</style>
+{% endblock %}

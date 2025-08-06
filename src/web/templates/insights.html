@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}Advanced Insights - NFL Analysis Engine{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-chart-line text-primary me-3"></i>
+            Advanced NFL Insights
+        </h1>
+        <p class="lead text-muted">
+            Deep analytics with Expected Points Added (EPA), Win Probability (WP), and advanced metrics.
+        </p>
+    </div>
+</div>
+
+<!-- Quick Access Cards -->
+<div class="row mb-5">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-users fa-3x text-primary"></i>
+                </div>
+                <h5 class="card-title">Team Analysis</h5>
+                <p class="card-text">Comprehensive team insights with EPA, efficiency metrics, and performance trends.</p>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#teamInsightsModal">
+                    <i class="fas fa-search me-2"></i>Analyze Team
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-balance-scale fa-3x text-success"></i>
+                </div>
+                <h5 class="card-title">Team Comparison</h5>
+                <p class="card-text">Head-to-head comparison using advanced metrics and situational performance.</p>
+                <a href="/web/insights/compare" class="btn btn-success">
+                    <i class="fas fa-arrows-alt-h me-2"></i>Compare Teams
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-trophy fa-3x text-warning"></i>
+                </div>
+                <h5 class="card-title">League Leaders</h5>
+                <p class="card-text">Top performers across offensive, defensive, and situational metrics.</p>
+                <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#leagueLeadersModal">
+                    <i class="fas fa-crown me-2"></i>View Leaders
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Advanced Metrics Overview -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Understanding Advanced Metrics
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-primary"><i class="fas fa-plus-circle me-2"></i>Expected Points Added (EPA)</h6>
+                        <p class="small text-muted mb-3">
+                            EPA measures the value of each play by comparing the expected points before and after the play. 
+                            Positive EPA indicates the play improved the team's position.
+                        </p>
+                        
+                        <h6 class="text-primary"><i class="fas fa-percentage me-2"></i>Win Probability Added (WPA)</h6>
+                        <p class="small text-muted mb-3">
+                            WPA tracks how much a play changes the probability of winning the game. 
+                            More impactful in close games and late situations.
+                        </p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-primary"><i class="fas fa-bullseye me-2"></i>Success Rate</h6>
+                        <p class="small text-muted mb-3">
+                            Percentage of plays that achieve their "successful" outcome (gaining enough yards 
+                            considering down and distance).
+                        </p>
+                        
+                        <h6 class="text-primary"><i class="fas fa-fire me-2"></i>Explosive Plays</h6>
+                        <p class="small text-muted mb-3">
+                            Plays with significant yardage gains (20+ yards) or touchdowns that can 
+                            change the momentum of a game.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Team Insights Modal -->
+<div class="modal fade" id="teamInsightsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-users me-2"></i>Team Insights
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/web/insights/team" method="get">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="team_select" class="form-label">Select Team</label>
+                        <select name="team_abbr" id="team_select" class="form-select" required>
+                            <option value="">Choose a team...</option>
+                            {% for team in teams %}
+                            <option value="{{ team.team_abbr }}">
+                                {{ team.team_name }} {{ team.team_nick }} ({{ team.team_abbr }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="season_select" class="form-label">Season</label>
+                        <select name="season" id="season_select" class="form-select" required>
+                            <option value="">Choose a season...</option>
+                            {% for season in available_seasons %}
+                            <option value="{{ season }}">{{ season }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-chart-line me-2"></i>Generate Insights
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- League Leaders Modal -->
+<div class="modal fade" id="leagueLeadersModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="fas fa-trophy me-2"></i>League Leaders
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/web/insights/leaders" method="get">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="leaders_season" class="form-label">Season</label>
+                        <select name="season" id="leaders_season" class="form-select" required>
+                            <option value="">Choose a season...</option>
+                            {% for season in available_seasons %}
+                            <option value="{{ season }}">{{ season }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="leaders_metric" class="form-label">Metric</label>
+                        <select name="metric" id="leaders_metric" class="form-select" required>
+                            <optgroup label="Offensive Metrics">
+                                <option value="offensive_epa_per_play">Offensive EPA per Play</option>
+                                <option value="passing_epa_per_play">Passing EPA per Play</option>
+                                <option value="rushing_epa_per_play">Rushing EPA per Play</option>
+                                <option value="red_zone_efficiency">Red Zone Efficiency</option>
+                                <option value="third_down_conversion_rate">3rd Down Conversion Rate</option>
+                            </optgroup>
+                            <optgroup label="Defensive Metrics">
+                                <option value="defensive_epa_per_play">Defensive EPA per Play</option>
+                                <option value="pass_defense_epa">Pass Defense EPA</option>
+                                <option value="run_defense_epa">Run Defense EPA</option>
+                                <option value="red_zone_defense">Red Zone Defense</option>
+                                <option value="third_down_defense">3rd Down Defense</option>
+                            </optgroup>
+                            <optgroup label="Situational Metrics">
+                                <option value="clutch_performance">Clutch Performance</option>
+                                <option value="two_minute_drill_efficiency">Two-Minute Drill</option>
+                                <option value="turnover_margin">Turnover Margin</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-crown me-2"></i>View Leaders
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle team insights form submission
+    const teamForm = document.querySelector('#teamInsightsModal form');
+    if (teamForm) {
+        teamForm.addEventListener('submit', function(e) {
+            const team = document.getElementById('team_select').value;
+            const season = document.getElementById('season_select').value;
+            
+            if (team && season) {
+                // Update action URL to match route pattern
+                this.action = `/web/insights/team/${team}/${season}`;
+            }
+        });
+    }
+    
+    // Handle league leaders form submission  
+    const leadersForm = document.querySelector('#leagueLeadersModal form');
+    if (leadersForm) {
+        leadersForm.addEventListener('submit', function(e) {
+            const season = document.getElementById('leaders_season').value;
+            
+            if (season) {
+                // Update action URL to match route pattern
+                this.action = `/web/insights/leaders/${season}`;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Prediction Result - NFL Analysis Engine{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        {% if error %}
+            <div class="alert alert-danger" role="alert">
+                <h4 class="alert-heading">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Prediction Failed
+                </h4>
+                <p class="mb-0">{{ error }}</p>
+            </div>
+            <div class="text-center">
+                <a href="/web/predict" class="btn btn-primary">
+                    <i class="fas fa-arrow-left me-2"></i>Try Again
+                </a>
+            </div>
+        {% else %}
+            <!-- Prediction Result Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-crystal-ball me-2"></i>Game Prediction
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Matchup Header -->
+                    <div class="row mb-4">
+                        <div class="col-12 text-center">
+                            <h4 class="mb-3">{{ game_date.strftime('%A, %B %d, %Y') }}</h4>
+                            <div class="d-flex justify-content-center align-items-center">
+                                <div class="text-center me-4">
+                                    <div class="team-logo-large mb-2" 
+                                         style="background-color: {{ away_team_obj.team_color if away_team_obj else '#333' }};">
+                                        {{ prediction.away_team }}
+                                    </div>
+                                    <h5>{{ away_team_obj.team_name if away_team_obj else prediction.away_team }}</h5>
+                                    <small class="text-muted">{{ away_team_obj.team_nick if away_team_obj else 'Away' }}</small>
+                                </div>
+                                
+                                <div class="mx-4">
+                                    <h2 class="text-muted">@</h2>
+                                </div>
+                                
+                                <div class="text-center ms-4">
+                                    <div class="team-logo-large mb-2" 
+                                         style="background-color: {{ home_team_obj.team_color if home_team_obj else '#333' }};">
+                                        {{ prediction.home_team }}
+                                    </div>
+                                    <h5>{{ home_team_obj.team_name if home_team_obj else prediction.home_team }}</h5>
+                                    <small class="text-muted">{{ home_team_obj.team_nick if home_team_obj else 'Home' }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Prediction Results -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title text-success">
+                                        <i class="fas fa-trophy me-2"></i>Predicted Winner
+                                    </h5>
+                                    <h2 class="text-success mb-2">{{ prediction.predicted_winner }}</h2>
+                                    <p class="mb-0">
+                                        <strong>{{ (prediction.win_probability * 100)|round(1) }}%</strong> chance to win
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title text-info">
+                                        <i class="fas fa-chart-line me-2"></i>Confidence Level
+                                    </h5>
+                                    <h2 class="text-info mb-2">{{ (prediction.confidence * 100)|round(1) }}%</h2>
+                                    <div class="progress" style="height: 10px;">
+                                        <div class="progress-bar bg-info" role="progressbar" 
+                                             style="width: {{ (prediction.confidence * 100)|round(1) }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Win Probabilities -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        {{ prediction.home_team }} Win Probability
+                                    </h6>
+                                    <div class="progress mb-2" style="height: 25px;">
+                                        <div class="progress-bar bg-primary" role="progressbar" 
+                                             style="width: {{ (prediction.home_win_prob * 100)|round(1) }}%">
+                                            <strong>{{ (prediction.home_win_prob * 100)|round(1) }}%</strong>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">Home Field Advantage Included</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        {{ prediction.away_team }} Win Probability
+                                    </h6>
+                                    <div class="progress mb-2" style="height: 25px;">
+                                        <div class="progress-bar bg-warning" role="progressbar" 
+                                             style="width: {{ (prediction.away_win_prob * 100)|round(1) }}%">
+                                            <strong>{{ (prediction.away_win_prob * 100)|round(1) }}%</strong>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">Away Team Probability</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Key Features -->
+                    {% if prediction.features %}
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-cogs me-2"></i>Key Prediction Features
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                {% set feature_items = prediction.features.items()|list %}
+                                {% for i in range(0, feature_items|length, 3) %}
+                                    {% set batch = feature_items[i:i+3] %}
+                                    {% for feature, value in batch %}
+                                        <div class="col-md-4 mb-2">
+                                            <div class="d-flex justify-content-between">
+                                                <span class="text-muted">{{ feature.replace('_', ' ').title() }}:</span>
+                                                <strong>
+                                                    {% if value is number %}
+                                                        {{ value|round(3) }}
+                                                    {% else %}
+                                                        {{ value }}
+                                                    {% endif %}
+                                                </strong>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="text-center">
+                <a href="/web/predict" class="btn btn-primary me-3">
+                    <i class="fas fa-magic me-2"></i>Predict Another Game
+                </a>
+                <a href="/web/predictions" class="btn btn-success me-3">
+                    <i class="fas fa-crystal-ball me-2"></i>View All Predictions
+                </a>
+                <a href="/web/value-bets" class="btn btn-warning">
+                    <i class="fas fa-dollar-sign me-2"></i>Check Value Bets
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.team-logo-large {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 20px;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    margin: 0 auto;
+    border: 3px solid #fff;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.progress-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+</style>
+{% endblock %}

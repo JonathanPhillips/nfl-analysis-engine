@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block title %}{{ team.team_name }} {{ team.team_nick }} Insights - {{ season }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-2">
+                    <div class="team-logo me-3" style="background: linear-gradient(135deg, var(--nfl-blue), var(--nfl-red));">
+                        {{ team.team_abbr }}
+                    </div>
+                    {{ team.team_name }} {{ team.team_nick }} - {{ season }}
+                </h1>
+                <p class="lead text-muted">Advanced Analytics & Performance Insights</p>
+            </div>
+            <div>
+                <a href="/web/insights" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Insights
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-warning">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    {{ error }}
+</div>
+{% endif %}
+
+{% if insights %}
+<!-- Key Performance Indicators -->
+<div class="row mb-5">
+    <div class="col-md-3 mb-3">
+        <div class="card text-white" style="background: linear-gradient(135deg, #00b894, #00cec9);">
+            <div class="card-body text-center">
+                <div class="stats-number">{{ "%.3f"|format(insights.offensive_epa_per_play) }}</div>
+                <div class="small">Offensive EPA/Play</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-white" style="background: linear-gradient(135deg, #e17055, #fdcb6e);">
+            <div class="card-body text-center">
+                <div class="stats-number">{{ "%.3f"|format(insights.defensive_epa_per_play) }}</div>
+                <div class="small">Defensive EPA/Play</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-white" style="background: linear-gradient(135deg, #6c5ce7, #a29bfe);">
+            <div class="card-body text-center">
+                <div class="stats-number">{{ "%.1f"|format(insights.red_zone_efficiency * 100) }}%</div>
+                <div class="small">Red Zone TD Rate</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-white" style="background: linear-gradient(135deg, #fd79a8, #fdcb6e);">
+            <div class="card-body text-center">
+                <div class="stats-number">{{ "%.1f"|format(insights.third_down_conversion_rate * 100) }}%</div>
+                <div class="small">3rd Down Rate</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Offensive Analytics -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-arrow-up me-2"></i>Offensive Performance
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <h6 class="text-muted">Passing EPA/Play</h6>
+                        <h4 class="text-success">{{ "%.3f"|format(insights.passing_epa_per_play) }}</h4>
+                    </div>
+                    <div class="col-6">
+                        <h6 class="text-muted">Rushing EPA/Play</h6>
+                        <h4 class="text-success">{{ "%.3f"|format(insights.rushing_epa_per_play) }}</h4>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <h6 class="text-muted">Red Zone Efficiency</h6>
+                        <div class="progress mb-2" style="height: 20px;">
+                            <div class="progress-bar bg-success" style="width: {{ insights.red_zone_efficiency * 100 }}%">
+                                {{ "%.1f"|format(insights.red_zone_efficiency * 100) }}%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="text-muted">Third Down Conversion Rate</h6>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-info" style="width: {{ insights.third_down_conversion_rate * 100 }}%">
+                                {{ "%.1f"|format(insights.third_down_conversion_rate * 100) }}%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-shield-alt me-2"></i>Defensive Performance
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <h6 class="text-muted">Pass Defense EPA</h6>
+                        <h4 class="text-danger">{{ "%.3f"|format(insights.pass_defense_epa) }}</h4>
+                    </div>
+                    <div class="col-6">
+                        <h6 class="text-muted">Run Defense EPA</h6>
+                        <h4 class="text-danger">{{ "%.3f"|format(insights.run_defense_epa) }}</h4>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <h6 class="text-muted">Red Zone Defense</h6>
+                        <div class="progress mb-2" style="height: 20px;">
+                            <div class="progress-bar bg-danger" style="width: {{ insights.red_zone_defense * 100 }}%">
+                                {{ "%.1f"|format(insights.red_zone_defense * 100) }}%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="text-muted">Third Down Defense</h6>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-warning" style="width: {{ insights.third_down_defense * 100 }}%">
+                                {{ "%.1f"|format(insights.third_down_defense * 100) }}%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Situational Performance -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-clock me-2"></i>Situational Performance
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <h6 class="text-muted">Two-Minute Drill</h6>
+                        <h4 class="text-primary">{{ "%.3f"|format(insights.two_minute_drill_efficiency) }}</h4>
+                    </div>
+                    <div class="col-md-3">
+                        <h6 class="text-muted">Clutch Performance</h6>
+                        <h4 class="text-primary">{{ "%.3f"|format(insights.clutch_performance) }}</h4>
+                    </div>
+                    <div class="col-md-3">
+                        <h6 class="text-muted">Turnover Margin</h6>
+                        <h4 class="text-primary">{{ "%.1f"|format(insights.turnover_margin) }}</h4>
+                    </div>
+                    <div class="col-md-3">
+                        <h6 class="text-muted">Home Field Advantage</h6>
+                        <h4 class="text-primary">{{ "%.3f"|format(insights.home_field_advantage) }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Trend Analysis -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Season Trends
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6 class="text-muted">Early Season</h6>
+                        <h4 class="text-info">{{ "%.3f"|format(insights.early_season_performance) }}</h4>
+                        <p class="small text-muted">Performance in first half of season</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="text-muted">Late Season</h6>
+                        <h4 class="text-info">{{ "%.3f"|format(insights.late_season_performance) }}</h4>
+                        <p class="small text-muted">Performance in second half of season</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="text-muted">Improvement Trajectory</h6>
+                        <h4 class="text-info">{{ "%.3f"|format(insights.improvement_trajectory) }}</h4>
+                        <p class="small text-muted">Rate of improvement throughout season</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Season Narrative -->
+{% if narrative %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-book me-2"></i>Season Story
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="lead" style="line-height: 1.6;">
+                    {{ narrative | replace("**", "") | replace("\n", "<br>") | safe }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Advanced Contextual Metrics -->
+<div class="row">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-microscope me-2"></i>Advanced Context
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6 class="text-muted">Garbage Time Adj. EPA</h6>
+                        <h4 class="text-dark">{{ "%.3f"|format(insights.garbage_time_adjusted_epa) }}</h4>
+                        <p class="small text-muted">EPA excluding garbage time situations</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="text-muted">Strength of Schedule</h6>
+                        <h4 class="text-dark">{{ "%.3f"|format(insights.strength_of_schedule) }}</h4>
+                        <p class="small text-muted">Average opponent strength (0.5 = average)</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="text-muted">Overall Rating</h6>
+                        {% set overall_rating = (insights.offensive_epa_per_play + insights.defensive_epa_per_play + insights.clutch_performance) / 3 %}
+                        <h4 class="text-dark">{{ "%.3f"|format(overall_rating) }}</h4>
+                        <p class="small text-muted">Composite performance score</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+
+{% endblock %}

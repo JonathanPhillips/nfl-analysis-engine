@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Games - NFL Analysis Engine{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="fas fa-calendar-alt me-3"></i>NFL Games
+    </h1>
+    <div>
+        <span class="badge bg-primary fs-6">{{ games|length }} Games</span>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label for="season" class="form-label">Season</label>
+                        <input type="number" class="form-control" id="season" name="season" 
+                               value="{{ current_season }}" min="2020" max="2030">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="week" class="form-label">Week</label>
+                        <select class="form-select" id="week" name="week">
+                            <option value="">All Weeks</option>
+                            {% for w in available_weeks %}
+                                <option value="{{ w }}" {% if w == current_week %}selected{% endif %}>
+                                    Week {{ w }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter me-2"></i>Filter Games
+                        </button>
+                        <a href="/web/games" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Clear
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Games List -->
+{% if games %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>Game Results
+                        {% if current_week %}(Week {{ current_week }}){% endif %}
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Week</th>
+                                    <th>Matchup</th>
+                                    <th>Score</th>
+                                    <th>Total</th>
+                                    <th>Type</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for game in games %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ game.game_date.strftime('%m/%d/%Y') }}</strong><br>
+                                        <small class="text-muted">{{ game.game_date.strftime('%A') }}</small>
+                                    </td>
+                                    <td>
+                                        {% if game.week %}
+                                            <span class="badge bg-secondary">{{ game.week }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="team-logo me-2">{{ game.away_team }}</div>
+                                            <span class="me-2">@</span>
+                                            <div class="team-logo">{{ game.home_team }}</div>
+                                        </div>
+                                        <small class="text-muted d-block">
+                                            {{ game.away_team }} @ {{ game.home_team }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {% if game.home_score is not none and game.away_score is not none %}
+                                            <div class="d-flex align-items-center">
+                                                <span class="badge {% if game.away_score > game.home_score %}bg-success{% else %}bg-secondary{% endif %} me-1">
+                                                    {{ game.away_score }}
+                                                </span>
+                                                <span class="me-1">-</span>
+                                                <span class="badge {% if game.home_score > game.away_score %}bg-success{% else %}bg-secondary{% endif %}">
+                                                    {{ game.home_score }}
+                                                </span>
+                                            </div>
+                                            {% if game.home_score == game.away_score %}
+                                                <small class="text-warning">TIE</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge bg-warning">Upcoming</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if game.total_score is not none %}
+                                            <strong>{{ game.total_score }}</strong>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if game.season_type == 'REG' %}bg-primary
+                                            {% elif game.season_type == 'POST' %}bg-danger
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ game.season_type }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Summary Stats -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Summary Statistics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            {% set completed_games = games|selectattr('home_score', 'ne', none)|list %}
+                            <h4 class="text-success">{{ completed_games|length }}</h4>
+                            <small class="text-muted">Completed Games</small>
+                        </div>
+                        <div class="col-md-3">
+                            {% set upcoming_games = games|selectattr('home_score', 'eq', none)|list %}
+                            <h4 class="text-warning">{{ upcoming_games|length }}</h4>
+                            <small class="text-muted">Upcoming Games</small>
+                        </div>
+                        <div class="col-md-3">
+                            {% if completed_games %}
+                                {% set avg_total = (completed_games|map(attribute='total_score')|select|sum / completed_games|selectattr('total_score', 'ne', none)|list|length)|round(1) %}
+                                <h4 class="text-info">{{ avg_total }}</h4>
+                                <small class="text-muted">Avg Total Points</small>
+                            {% else %}
+                                <h4 class="text-muted">-</h4>
+                                <small class="text-muted">Avg Total Points</small>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            {% set home_wins = completed_games|selectattr('home_score', '>', 'away_score')|list|length %}
+                            {% if completed_games %}
+                                {% set home_win_pct = (home_wins / completed_games|length * 100)|round(1) %}
+                                <h4 class="text-primary">{{ home_win_pct }}%</h4>
+                            {% else %}
+                                <h4 class="text-muted">-</h4>
+                            {% endif %}
+                            <small class="text-muted">Home Win %</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+{% else %}
+    <div class="text-center">
+        <div class="card">
+            <div class="card-body">
+                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No Games Found</h4>
+                <p class="text-muted">No games match your current filters.</p>
+                <a href="/web/games" class="btn btn-primary">
+                    <i class="fas fa-refresh me-2"></i>View All Games
+                </a>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

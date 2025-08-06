@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Predict Game - NFL Analysis Engine{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="mb-0">
+                    <i class="fas fa-magic me-2"></i>Predict Game Outcome
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="post" action="/web/predict">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="away_team" class="form-label">
+                                <i class="fas fa-plane me-1"></i>Away Team
+                            </label>
+                            <select class="form-select" id="away_team" name="away_team" required>
+                                <option value="">Select away team...</option>
+                                {% for team in teams %}
+                                    <option value="{{ team.team_abbr }}">
+                                        {{ team.team_name }} {{ team.team_nick }} ({{ team.team_abbr }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="home_team" class="form-label">
+                                <i class="fas fa-home me-1"></i>Home Team
+                            </label>
+                            <select class="form-select" id="home_team" name="home_team" required>
+                                <option value="">Select home team...</option>
+                                {% for team in teams %}
+                                    <option value="{{ team.team_abbr }}">
+                                        {{ team.team_name }} {{ team.team_nick }} ({{ team.team_abbr }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="game_date" class="form-label">
+                                <i class="fas fa-calendar me-1"></i>Game Date
+                            </label>
+                            <input type="date" class="form-control" id="game_date" name="game_date" 
+                                   value="{{ (datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d') }}" required>
+                            <div class="form-text">Date helps determine team form and seasonal context</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="season" class="form-label">
+                                <i class="fas fa-calendar-alt me-1"></i>Season (Optional)
+                            </label>
+                            <input type="number" class="form-control" id="season" name="season" 
+                                   min="2020" max="2030" placeholder="Auto-detected from date">
+                            <div class="form-text">Leave blank to auto-detect from game date</div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-crystal-ball me-2"></i>Generate Prediction
+                        </button>
+                    </div>
+                </form>
+                
+                <hr class="my-4">
+                
+                <div class="alert alert-info">
+                    <h5 class="alert-heading">
+                        <i class="fas fa-info-circle me-2"></i>How It Works
+                    </h5>
+                    <p class="mb-0">
+                        Our machine learning model analyzes 30+ features including:
+                    </p>
+                    <ul class="mt-2 mb-0">
+                        <li><strong>Team Performance:</strong> Win percentages, scoring averages, defensive stats</li>
+                        <li><strong>Head-to-Head History:</strong> Past matchup results and trends</li>
+                        <li><strong>Recent Form:</strong> Performance in last 3-5 games</li>
+                        <li><strong>Contextual Factors:</strong> Home field advantage, rest days, season timing</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Prevent selecting the same team for both home and away
+document.addEventListener('DOMContentLoaded', function() {
+    const awaySelect = document.getElementById('away_team');
+    const homeSelect = document.getElementById('home_team');
+    
+    function updateOptions(changedSelect, otherSelect) {
+        const selectedValue = changedSelect.value;
+        const options = otherSelect.querySelectorAll('option');
+        
+        options.forEach(option => {
+            if (option.value === selectedValue && selectedValue !== '') {
+                option.disabled = true;
+                option.style.color = '#ccc';
+            } else {
+                option.disabled = false;
+                option.style.color = '';
+            }
+        });
+    }
+    
+    awaySelect.addEventListener('change', function() {
+        updateOptions(this, homeSelect);
+    });
+    
+    homeSelect.addEventListener('change', function() {
+        updateOptions(this, awaySelect);
+    });
+});
+</script>
+{% endblock %}

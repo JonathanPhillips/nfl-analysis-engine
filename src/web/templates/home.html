@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - NFL Analysis Engine{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center py-5">
+                <h1 class="display-4 mb-3">
+                    <i class="fas fa-football-ball me-3"></i>
+                    NFL Analysis Engine
+                </h1>
+                <p class="lead mb-4">
+                    Professional-grade NFL data analysis, machine learning predictions, and value betting opportunities
+                </p>
+                <div class="row">
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <a href="/web/predictions" class="btn btn-light btn-lg">
+                            <i class="fas fa-crystal-ball me-2"></i>
+                            View Predictions
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <a href="/web/predict" class="btn btn-outline-light btn-lg">
+                            <i class="fas fa-magic me-2"></i>
+                            Predict Game
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <a href="/web/value-bets" class="btn btn-warning btn-lg">
+                            <i class="fas fa-dollar-sign me-2"></i>
+                            Value Bets
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <a href="/web/model" class="btn btn-success btn-lg">
+                            <i class="fas fa-cog me-2"></i>
+                            Model Status
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="card stats-card h-100">
+            <div class="card-body text-center">
+                <div class="stats-number">{{ total_teams }}</div>
+                <h5 class="card-title">
+                    <i class="fas fa-users me-2"></i>Teams
+                </h5>
+                <p class="card-text">NFL franchises tracked</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="card stats-card h-100">
+            <div class="card-body text-center">
+                <div class="stats-number">{{ total_games }}</div>
+                <h5 class="card-title">
+                    <i class="fas fa-calendar-alt me-2"></i>Games
+                </h5>
+                <p class="card-text">Total games in database</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="card stats-card h-100">
+            <div class="card-body text-center">
+                <div class="stats-number">{{ total_players }}</div>
+                <h5 class="card-title">
+                    <i class="fas fa-user-friends me-2"></i>Players
+                </h5>
+                <p class="card-text">Active player records</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="card prediction-card h-100">
+            <div class="card-body text-center">
+                <div class="stats-number">{{ upcoming_games|length }}</div>
+                <h5 class="card-title">
+                    <i class="fas fa-crystal-ball me-2"></i>Upcoming
+                </h5>
+                <p class="card-text">Games ready to predict</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent and Upcoming Games -->
+<div class="row">
+    <!-- Recent Games -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-history me-2"></i>Recent Games
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_games %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Matchup</th>
+                                    <th>Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for game in recent_games %}
+                                <tr>
+                                    <td>
+                                        <small class="text-muted">{{ game.game_date.strftime('%m/%d') }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="team-logo me-2">{{ game.away_team }}</div>
+                                            <span class="me-2">@</span>
+                                            <div class="team-logo">{{ game.home_team }}</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if game.home_score > game.away_score %}bg-success{% else %}bg-secondary{% endif %}">
+                                            {{ game.home_score }}
+                                        </span>
+                                        -
+                                        <span class="badge {% if game.away_score > game.home_score %}bg-success{% else %}bg-secondary{% endif %}">
+                                            {{ game.away_score }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-calendar-times fa-3x mb-3"></i>
+                        <p>No recent games found</p>
+                    </div>
+                {% endif %}
+                <div class="text-center mt-3">
+                    <a href="/web/games" class="btn btn-primary">
+                        <i class="fas fa-eye me-2"></i>View All Games
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming Games -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-clock me-2"></i>Upcoming Games
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if upcoming_games %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Matchup</th>
+                                    <th>Week</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for game in upcoming_games %}
+                                <tr>
+                                    <td>
+                                        <small class="text-muted">{{ game.game_date.strftime('%m/%d') }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="team-logo me-2">{{ game.away_team }}</div>
+                                            <span class="me-2">@</span>
+                                            <div class="team-logo">{{ game.home_team }}</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">Week {{ game.week or 'TBD' }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-calendar-plus fa-3x mb-3"></i>
+                        <p>No upcoming games found</p>
+                    </div>
+                {% endif %}
+                <div class="text-center mt-3">
+                    <a href="/web/predictions" class="btn btn-success">
+                        <i class="fas fa-crystal-ball me-2"></i>Get Predictions
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="d-grid">
+                            <a href="/web/predict" class="btn btn-primary btn-lg">
+                                <i class="fas fa-magic me-2"></i>
+                                Predict Single Game
+                            </a>
+                        </div>
+                        <small class="text-muted d-block mt-2 text-center">
+                            Get AI prediction for any matchup
+                        </small>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="d-grid">
+                            <a href="/web/teams" class="btn btn-info btn-lg">
+                                <i class="fas fa-users me-2"></i>
+                                Browse Teams
+                            </a>
+                        </div>
+                        <small class="text-muted d-block mt-2 text-center">
+                            View team statistics and history
+                        </small>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="d-grid">
+                            <a href="/api/docs" target="_blank" class="btn btn-dark btn-lg">
+                                <i class="fas fa-code me-2"></i>
+                                API Documentation
+                            </a>
+                        </div>
+                        <small class="text-muted d-block mt-2 text-center">
+                            Explore REST API endpoints
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

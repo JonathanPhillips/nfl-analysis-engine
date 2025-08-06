@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}Value Bets - NFL Analysis Engine{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="fas fa-dollar-sign me-3"></i>Value Betting Opportunities
+    </h1>
+    <div>
+        {% if value_bets %}
+            <span class="badge bg-success fs-6">{{ value_bets|length }} Opportunities</span>
+        {% else %}
+            <span class="badge bg-secondary fs-6">No Opportunities</span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Explanation Card -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-lightbulb me-2"></i>What are Value Bets?
+                </h5>
+                <p class="mb-0">
+                    Value bets occur when our AI model believes a team has a higher chance of winning than implied by Vegas odds. 
+                    These represent potential opportunities where the market may have mispriced the game.
+                </p>
+                <small class="opacity-75">
+                    <strong>Disclaimer:</strong> This is for educational purposes only. Always gamble responsibly and within your means.
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if not model_trained %}
+    <div class="alert alert-warning" role="alert">
+        <h4 class="alert-heading">
+            <i class="fas fa-exclamation-triangle me-2"></i>Model Not Trained
+        </h4>
+        <p>The prediction model must be trained before we can identify value betting opportunities.</p>
+        <hr>
+        <a href="/web/model" class="btn btn-warning">
+            <i class="fas fa-cog me-2"></i>Train Model First
+        </a>
+    </div>
+{% elif not value_bets %}
+    <div class="alert alert-info" role="alert">
+        <h4 class="alert-heading">
+            <i class="fas fa-info-circle me-2"></i>No Value Bets Found
+        </h4>
+        <p class="mb-0">
+            No value betting opportunities were identified for upcoming games. This could mean:
+        </p>
+        <ul class="mt-2 mb-0">
+            <li>Our model agrees with market pricing</li>
+            <li>No upcoming games in the analysis window</li>
+            <li>Market efficiency is high for these matchups</li>
+        </ul>
+    </div>
+{% else %}
+    <!-- Value Bets -->
+    <div class="row">
+        {% for bet in value_bets %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100 value-bet-card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                <i class="fas fa-calendar me-1"></i>
+                                {{ bet.game_date.strftime('%m/%d') }}
+                            </h6>
+                            <span class="badge bg-light text-dark">
+                                {{ bet.bet_type.replace('_', ' ').title() }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body">
+                        <!-- Matchup -->
+                        <div class="text-center mb-3">
+                            <div class="d-flex justify-content-center align-items-center">
+                                <div class="text-center">
+                                    <div class="team-logo mb-1">{{ bet.away_team }}</div>
+                                    <small>{{ bet.away_team }}</small>
+                                </div>
+                                <div class="mx-3">
+                                    <h5 class="mb-0">@</h5>
+                                </div>
+                                <div class="text-center">
+                                    <div class="team-logo mb-1">{{ bet.home_team }}</div>
+                                    <small>{{ bet.home_team }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Recommendation -->
+                        <div class="text-center mb-3">
+                            <h5 class="text-warning mb-1">
+                                <i class="fas fa-arrow-up me-1"></i>
+                                Bet {{ bet.recommendation.upper() }}
+                            </h5>
+                            <div class="row">
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Our Model</small>
+                                    <strong>{{ (bet.model_probability * 100)|round(1) }}%</strong>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Vegas Implied</small>
+                                    <strong>{{ (bet.vegas_probability * 100)|round(1) }}%</strong>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Value Metrics -->
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <small class="text-muted">Expected Value</small>
+                                    <div class="h5 {% if bet.expected_value > 0.1 %}text-success{% elif bet.expected_value > 0.05 %}text-warning{% else %}text-info{% endif %}">
+                                        +{{ (bet.expected_value * 100)|round(1) }}%
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <small class="text-muted">Confidence</small>
+                                    <div class="h5 {% if bet.confidence > 0.7 %}text-success{% elif bet.confidence > 0.4 %}text-warning{% else %}text-danger{% endif %}">
+                                        {{ (bet.confidence * 100)|round(1) }}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Edge Display -->
+                        <div class="mt-3">
+                            {% set edge = bet.model_probability - bet.vegas_probability %}
+                            <small class="text-muted">Model Edge:</small>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {{ (edge * 500)|round(1) }}%"></div>
+                            </div>
+                            <small class="text-success">
+                                <strong>+{{ (edge * 100)|round(1) }}%</strong> edge
+                            </small>
+                        </div>
+                        
+                        <!-- Reasoning -->
+                        <div class="mt-3">
+                            <small class="text-muted d-block">Analysis:</small>
+                            <small>{{ bet.reasoning }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Summary and Disclaimers -->
+    <div class="row mt-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Important Notes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <h6 class="alert-heading">Risk Disclaimer</h6>
+                        <ul class="mb-0">
+                            <li>All betting involves risk and you may lose money</li>
+                            <li>Past performance does not guarantee future results</li>
+                            <li>These are model predictions, not guarantees</li>
+                            <li>Always bet responsibly and within your means</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <h6>How to Interpret Value Bets:</h6>
+                        <ul class="mb-0">
+                            <li><strong>Expected Value (EV):</strong> Theoretical profit per dollar bet over time</li>
+                            <li><strong>Edge:</strong> Difference between our model and market probability</li>
+                            <li><strong>Confidence:</strong> Model's certainty in the prediction</li>
+                            <li><strong>Best Opportunities:</strong> High EV + High Confidence + Large Edge</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Summary Stats
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if value_bets %}
+                        <div class="text-center mb-3">
+                            <h4 class="text-success">{{ value_bets|length }}</h4>
+                            <small class="text-muted">Total Opportunities</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {% set avg_ev = (value_bets|map(attribute='expected_value')|sum / value_bets|length * 100)|round(1) %}
+                            <div class="d-flex justify-content-between">
+                                <span>Avg Expected Value:</span>
+                                <strong class="text-success">+{{ avg_ev }}%</strong>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {% set avg_edge = ((value_bets|map(attribute='model_probability')|sum - value_bets|map(attribute='vegas_probability')|sum) / value_bets|length * 100)|round(1) %}
+                            <div class="d-flex justify-content-between">
+                                <span>Avg Edge:</span>
+                                <strong class="text-info">+{{ avg_edge }}%</strong>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-0">
+                            {% set high_confidence = value_bets|selectattr('confidence', '>', 0.6)|list|length %}
+                            <div class="d-flex justify-content-between">
+                                <span>High Confidence:</span>
+                                <strong>{{ high_confidence }}/{{ value_bets|length }}</strong>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<style>
+.value-bet-card {
+    background: linear-gradient(135deg, #ff7675, #fd79a8);
+    color: white;
+    border: none;
+}
+
+.value-bet-card .card-header {
+    background: rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.value-bet-card .team-logo {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 12px;
+    backdrop-filter: blur(10px);
+}
+
+.value-bet-card .progress {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.value-bet-card small {
+    color: rgba(255, 255, 255, 0.8);
+}
+</style>
+{% endblock %}

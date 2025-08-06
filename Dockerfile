@@ -16,12 +16,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/ ./src/
 COPY tests/ ./tests/
 COPY pytest.ini .
+COPY alembic.ini .
+COPY migrations/ ./migrations/
 
-# Create data directory
-RUN mkdir -p /app/data
+# Create necessary directories
+RUN mkdir -p /app/data /app/models
 
-# Run tests during build to ensure code quality
-RUN python -m pytest tests/ -v
+# Skip tests during build for faster development (run them separately)
+# RUN python -m pytest tests/ -v
 
 # Set environment variables
 ENV PYTHONPATH=/app

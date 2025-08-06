@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Training Result - NFL Analysis Engine{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        {% if success %}
+            <div class="alert alert-success" role="alert">
+                <h4 class="alert-heading">
+                    <i class="fas fa-check-circle me-2"></i>Training Successful!
+                </h4>
+                <p>{{ message }}</p>
+            </div>
+            
+            {% if training_metrics and validation_metrics %}
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>Training Results
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Training Performance</h5>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <tbody>
+                                        <tr>
+                                            <td>Accuracy</td>
+                                            <td><strong>{{ (training_metrics.accuracy * 100)|round(2) }}%</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Precision</td>
+                                            <td>{{ (training_metrics.precision * 100)|round(2) }}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Recall</td>
+                                            <td>{{ (training_metrics.recall * 100)|round(2) }}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>F1 Score</td>
+                                            <td>{{ (training_metrics.f1_score * 100)|round(2) }}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Samples</td>
+                                            <td>{{ training_metrics.samples }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5>Validation Performance</h5>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <tbody>
+                                        <tr>
+                                            <td>Accuracy</td>
+                                            <td><strong>{{ (validation_metrics.accuracy * 100)|round(2) }}%</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Precision</td>
+                                            <td>{{ (validation_metrics.precision * 100)|round(2) }}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Recall</td>
+                                            <td>{{ (validation_metrics.recall * 100)|round(2) }}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>F1 Score</td>
+                                            <td>{{ (validation_metrics.f1_score * 100)|round(2) }}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Samples</td>
+                                            <td>{{ validation_metrics.samples }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        {% set val_acc = validation_metrics.accuracy %}
+                        {% if val_acc > 0.60 %}
+                            <div class="alert alert-success">
+                                <strong>Excellent Performance!</strong> Validation accuracy above 60% indicates a strong predictive model.
+                            </div>
+                        {% elif val_acc > 0.55 %}
+                            <div class="alert alert-info">
+                                <strong>Good Performance!</strong> Validation accuracy above 55% shows meaningful predictive power.
+                            </div>
+                        {% elif val_acc > 0.52 %}
+                            <div class="alert alert-warning">
+                                <strong>Moderate Performance.</strong> Model shows some predictive ability but could be improved.
+                            </div>
+                        {% else %}
+                            <div class="alert alert-danger">
+                                <strong>Low Performance.</strong> Model may need more data or feature engineering.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+        {% else %}
+            <div class="alert alert-danger" role="alert">
+                <h4 class="alert-heading">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Training Failed
+                </h4>
+                <p class="mb-0">{{ error }}</p>
+            </div>
+        {% endif %}
+        
+        <div class="text-center">
+            <a href="/web/model" class="btn btn-primary me-3">
+                <i class="fas fa-arrow-left me-2"></i>Back to Model Status
+            </a>
+            {% if success %}
+                <a href="/web/predictions" class="btn btn-success me-3">
+                    <i class="fas fa-crystal-ball me-2"></i>Make Predictions
+                </a>
+                <a href="/web/predict" class="btn btn-info">
+                    <i class="fas fa-magic me-2"></i>Predict Single Game
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

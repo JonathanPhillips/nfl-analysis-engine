@@ -21,12 +21,13 @@ services:
   web:
     build: .
     ports:
-      - "8000:8000"
+      - "8004:8000"
     environment:
       - DATABASE_URL=postgresql://nfl_user:nfl_password@db:5432/nfl_analysis
       - PYTHONPATH=/app
     volumes:
       - ./data:/app/data
+      - ./models:/app/models
     depends_on:
       db:
         condition: service_healthy
@@ -39,6 +40,7 @@ services:
       - PYTHONPATH=/app
     volumes:
       - ./data:/app/data
+      - ./models:/app/models
     depends_on:
       db:
         condition: service_healthy
