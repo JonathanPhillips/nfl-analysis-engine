@@ -277,12 +277,21 @@ async def predict_form(request: Request, db: Session = Depends(get_db_session)):
         # Get list of teams for dropdown
         teams = db.query(TeamModel).order_by(TeamModel.team_name).all()
         
+        # Calculate default game date (7 days from now)
+        from datetime import datetime, timedelta
+        default_date = (datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d')
+        current_season = datetime.now().year
+        
         return templates.TemplateResponse("predict_form.html", {
             "request": request,
-            "teams": teams
+            "teams": teams,
+            "default_date": default_date,
+            "current_season": current_season
         })
     except Exception as e:
         logger.error(f"Error loading predict form: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return templates.TemplateResponse("error.html", {
             "request": request,
             "error": "Failed to load prediction form"
