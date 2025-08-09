@@ -1,0 +1,471 @@
+{% extends "base.html" %}
+
+{% block title %}League Leaders - NFL Analysis Engine{% endblock %}
+
+{% block extra_css %}
+<style>
+    .leaders-header {
+        background: linear-gradient(135deg, var(--nfl-blue), #1e4a6b);
+        color: white;
+        padding: 3rem 0;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .leaders-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 40%;
+        height: 200%;
+        background: rgba(255, 255, 255, 0.05);
+        transform: rotate(15deg);
+    }
+    
+    .category-selector {
+        background: white;
+        border-radius: 10px;
+        padding: 0.5rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .category-btn {
+        background: none;
+        border: none;
+        padding: 0.6rem 1.2rem;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        color: var(--nfl-blue);
+    }
+    
+    .category-btn:hover {
+        background: #f8f9fa;
+    }
+    
+    .category-btn.active {
+        background: var(--nfl-blue);
+        color: white;
+    }
+    
+    .stats-table {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .stats-table-header {
+        background: linear-gradient(135deg, var(--nfl-blue), #1e4a6b);
+        color: white;
+        padding: 1rem 1.5rem;
+    }
+    
+    .table-rank {
+        font-weight: bold;
+        color: var(--nfl-blue);
+        font-size: 1.1rem;
+    }
+    
+    .rank-1 { color: #FFD700; }
+    .rank-2 { color: #C0C0C0; }
+    .rank-3 { color: #CD7F32; }
+    
+    .player-name {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    
+    .team-abbr {
+        background: #f8f9fa;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--nfl-blue);
+    }
+    
+    .stat-value {
+        font-weight: 500;
+    }
+    
+    .stat-highlight {
+        background: linear-gradient(135deg, #74b9ff, #0984e3);
+        color: white;
+        padding: 0.3rem 0.6rem;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+    
+    .epa-positive {
+        color: #28a745;
+        font-weight: 600;
+    }
+    
+    .epa-negative {
+        color: #dc3545;
+        font-weight: 600;
+    }
+    
+    .season-selector {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 0.4rem 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        font-weight: 500;
+    }
+    
+    .season-selector option {
+        background: var(--nfl-blue);
+    }
+    
+    .no-data-message {
+        text-align: center;
+        padding: 3rem;
+        color: #6c757d;
+    }
+    
+    .no-data-message i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+    
+    @media (max-width: 768px) {
+        .stats-table {
+            font-size: 0.9rem;
+        }
+        
+        .category-btn {
+            padding: 0.5rem 0.8rem;
+            font-size: 0.9rem;
+        }
+        
+        .table th, .table td {
+            padding: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Leaders Header -->
+<div class="leaders-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h1 class="mb-3">
+                    <i class="fas fa-trophy me-3"></i>League Leaders
+                </h1>
+                <p class="lead mb-0">Top performers across all positions with advanced metrics</p>
+            </div>
+            <div class="col-lg-4 text-end">
+                <select class="season-selector" onchange="changeSeason(this.value)">
+                    {% for s in available_seasons %}
+                    <option value="{{ s }}" {% if s == season %}selected{% endif %}>
+                        {{ s }} Season
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="container">
+    <!-- Category Selector -->
+    <div class="category-selector">
+        <div class="d-flex justify-content-center flex-wrap">
+            <button class="category-btn {% if category == 'all' %}active{% endif %}" 
+                    onclick="changeCategory('all')">
+                <i class="fas fa-globe me-2"></i>All Positions
+            </button>
+            <button class="category-btn {% if category == 'qb' %}active{% endif %}" 
+                    onclick="changeCategory('qb')">
+                <i class="fas fa-football-ball me-2"></i>Quarterbacks
+            </button>
+            <button class="category-btn {% if category == 'rb' %}active{% endif %}" 
+                    onclick="changeCategory('rb')">
+                <i class="fas fa-running me-2"></i>Running Backs
+            </button>
+            <button class="category-btn {% if category == 'wr' %}active{% endif %}" 
+                    onclick="changeCategory('wr')">
+                <i class="fas fa-hands me-2"></i>Receivers
+            </button>
+            <button class="category-btn {% if category == 'team' %}active{% endif %}" 
+                    onclick="changeCategory('team')">
+                <i class="fas fa-users me-2"></i>Team Offense
+            </button>
+        </div>
+    </div>
+    
+    <!-- Quarterbacks Table -->
+    {% if leaders.quarterbacks and (category == 'all' or category == 'qb') %}
+    <div class="stats-table">
+        <div class="stats-table-header">
+            <h5 class="mb-0">
+                <i class="fas fa-football-ball me-2"></i>Top Quarterbacks
+                <small class="ms-3 opacity-75">(Min. 150 attempts)</small>
+            </h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th width="50">Rank</th>
+                        <th>Player</th>
+                        <th>Team</th>
+                        <th>Comp %</th>
+                        <th>Yards</th>
+                        <th>TDs</th>
+                        <th>INTs</th>
+                        <th>Rating</th>
+                        <th>EPA/Play</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for qb in leaders.quarterbacks %}
+                    <tr>
+                        <td class="table-rank rank-{{ loop.index }}">{{ loop.index }}</td>
+                        <td class="player-name">{{ qb.player_name }}</td>
+                        <td><span class="team-abbr">{{ qb.team }}</span></td>
+                        <td>{{ qb.completion_pct }}%</td>
+                        <td>{{ "{:,}".format(qb.passing_yards) }}</td>
+                        <td class="stat-value">{{ qb.passing_tds }}</td>
+                        <td>{{ qb.interceptions }}</td>
+                        <td class="stat-highlight">{{ qb.passer_rating }}</td>
+                        <td class="{% if qb.avg_epa > 0 %}epa-positive{% else %}epa-negative{% endif %}">
+                            {{ qb.avg_epa }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Running Backs Table -->
+    {% if leaders.running_backs and (category == 'all' or category == 'rb') %}
+    <div class="stats-table">
+        <div class="stats-table-header">
+            <h5 class="mb-0">
+                <i class="fas fa-running me-2"></i>Top Running Backs
+                <small class="ms-3 opacity-75">(Min. 75 carries)</small>
+            </h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th width="50">Rank</th>
+                        <th>Player</th>
+                        <th>Team</th>
+                        <th>Carries</th>
+                        <th>Yards</th>
+                        <th>YPC</th>
+                        <th>TDs</th>
+                        <th>Long</th>
+                        <th>EPA/Play</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rb in leaders.running_backs %}
+                    <tr>
+                        <td class="table-rank rank-{{ loop.index }}">{{ loop.index }}</td>
+                        <td class="player-name">{{ rb.player_name }}</td>
+                        <td><span class="team-abbr">{{ rb.team }}</span></td>
+                        <td>{{ rb.carries }}</td>
+                        <td class="stat-highlight">{{ "{:,}".format(rb.rushing_yards) }}</td>
+                        <td class="stat-value">{{ rb.yards_per_carry }}</td>
+                        <td>{{ rb.rushing_tds }}</td>
+                        <td>{{ rb.longest_run }}</td>
+                        <td class="{% if rb.avg_epa > 0 %}epa-positive{% else %}epa-negative{% endif %}">
+                            {{ rb.avg_epa }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Receivers Table -->
+    {% if leaders.receivers and (category == 'all' or category == 'wr') %}
+    <div class="stats-table">
+        <div class="stats-table-header">
+            <h5 class="mb-0">
+                <i class="fas fa-hands me-2"></i>Top Receivers
+            </h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th width="50">Rank</th>
+                        <th>Player</th>
+                        <th>Team</th>
+                        <th>Rec</th>
+                        <th>Yards</th>
+                        <th>Y/R</th>
+                        <th>TDs</th>
+                        <th>Catch %</th>
+                        <th>EPA/Play</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for wr in leaders.receivers %}
+                    <tr>
+                        <td class="table-rank rank-{{ loop.index }}">{{ loop.index }}</td>
+                        <td class="player-name">{{ wr.player_name }}</td>
+                        <td><span class="team-abbr">{{ wr.team }}</span></td>
+                        <td>{{ wr.receptions }}</td>
+                        <td class="stat-highlight">{{ "{:,}".format(wr.receiving_yards) }}</td>
+                        <td class="stat-value">{{ wr.yards_per_reception }}</td>
+                        <td>{{ wr.receiving_tds }}</td>
+                        <td>{{ wr.catch_rate }}%</td>
+                        <td class="{% if wr.avg_epa > 0 %}epa-positive{% else %}epa-negative{% endif %}">
+                            {{ wr.avg_epa }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Team Offense Table -->
+    {% if leaders.team_offense and (category == 'all' or category == 'team') %}
+    <div class="stats-table">
+        <div class="stats-table-header">
+            <h5 class="mb-0">
+                <i class="fas fa-users me-2"></i>Team Offensive Rankings
+            </h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th width="50">Rank</th>
+                        <th>Team</th>
+                        <th>Total Yards</th>
+                        <th>Y/Play</th>
+                        <th>TDs</th>
+                        <th>Pass %</th>
+                        <th>Total EPA</th>
+                        <th>EPA/Play</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for team in leaders.team_offense %}
+                    <tr>
+                        <td class="table-rank rank-{{ loop.index }}">{{ loop.index }}</td>
+                        <td>
+                            <span class="team-abbr">{{ team.team }}</span>
+                        </td>
+                        <td>{{ "{:,}".format(team.total_yards) }}</td>
+                        <td class="stat-value">{{ team.yards_per_play }}</td>
+                        <td>{{ team.total_tds }}</td>
+                        <td>{{ team.pass_rate }}%</td>
+                        <td class="stat-highlight">{{ team.total_epa }}</td>
+                        <td class="{% if team.avg_epa > 0 %}epa-positive{% else %}epa-negative{% endif %}">
+                            {{ team.avg_epa }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- No Data Message -->
+    {% set show_qb = category == 'all' or category == 'qb' %}
+    {% set show_rb = category == 'all' or category == 'rb' %}
+    {% set show_wr = category == 'all' or category == 'wr' %}
+    {% set show_team = category == 'all' or category == 'team' %}
+    {% set has_data = (show_qb and leaders.quarterbacks) or (show_rb and leaders.running_backs) or (show_wr and leaders.receivers) or (show_team and leaders.team_offense) %}
+    {% if not has_data %}
+    <div class="no-data-message">
+        <i class="fas fa-chart-bar"></i>
+        <h4>No Statistics Available</h4>
+        <p>No players meet the minimum threshold requirements for the {{ season }} season.</p>
+        <p class="small text-muted mt-2">
+            Minimum requirements: QBs (150+ attempts), RBs (75+ carries), WRs (40+ targets)<br>
+            This ensures only legitimate starters appear in rankings, filtering out backup players with inflated small-sample statistics.
+        </p>
+    </div>
+    {% endif %}
+    
+    <!-- Info Cards -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-info-circle text-primary me-2"></i>About EPA
+                    </h6>
+                    <p class="card-text small">
+                        Expected Points Added (EPA) measures the value of each play in terms of points. 
+                        Positive EPA means the play improved the team's scoring position.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-calculator text-primary me-2"></i>Passer Rating
+                    </h6>
+                    <p class="card-text small">
+                        NFL passer rating combines completion percentage, yards per attempt, 
+                        touchdowns, and interceptions. Perfect rating is 158.3.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function changeSeason(season) {
+    const currentParams = new URLSearchParams(window.location.search);
+    currentParams.set('season', season);
+    window.location.href = '/web/league-leaders?' + currentParams.toString();
+}
+
+function changeCategory(category) {
+    const currentParams = new URLSearchParams(window.location.search);
+    currentParams.set('category', category);
+    window.location.href = '/web/league-leaders?' + currentParams.toString();
+}
+
+// Add smooth fade-in animation
+document.addEventListener('DOMContentLoaded', function() {
+    const tables = document.querySelectorAll('.stats-table');
+    tables.forEach((table, index) => {
+        setTimeout(() => {
+            table.style.opacity = '0';
+            table.style.transform = 'translateY(20px)';
+            table.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            
+            setTimeout(() => {
+                table.style.opacity = '1';
+                table.style.transform = 'translateY(0)';
+            }, 50);
+        }, index * 100);
+    });
+});
+</script>
+{% endblock %}
