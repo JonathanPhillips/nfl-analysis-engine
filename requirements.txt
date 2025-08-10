@@ -18,4 +18,6 @@ nfl_data_py
 pandas
 numpy
 scikit-learn
+xgboost
+scipy
 psycopg2-binary
