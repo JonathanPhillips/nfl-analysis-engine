@@ -401,7 +401,7 @@ class TestInsightsGenerator:
         assert isinstance(metrics, AdvancedMetrics)
         assert metrics.epa > 0  # Touchdown should have positive EPA
         assert metrics.wpa > 0  # Touchdown should have positive WPA
-        assert metrics.explosive_play is False  # 8-yard TD not explosive
+        assert metrics.explosive_play is True  # Touchdown is always explosive
         assert metrics.success_rate == 1.0  # Touchdown is always successful
     
     def test_calculate_play_metrics_interception(self, insights_generator):

@@ -17,12 +17,25 @@ def get_database_url() -> str:
     if db_url:
         return db_url
     
-    # Fallback to individual components
-    db_host = os.getenv('DB_HOST', 'localhost')
-    db_port = os.getenv('DB_PORT', '5432')
-    db_name = os.getenv('DB_NAME', 'nfl_analysis')
-    db_user = os.getenv('DB_USER', 'nfl_user')
-    db_password = os.getenv('DB_PASSWORD', 'nfl_password')
+    # Fallback to individual components - require all environment variables for security
+    db_host = os.getenv('DB_HOST')
+    db_port = os.getenv('DB_PORT')
+    db_name = os.getenv('DB_NAME')
+    db_user = os.getenv('DB_USER')
+    db_password = os.getenv('DB_PASSWORD')
+    
+    # Validate that all required environment variables are set
+    if not all([db_host, db_port, db_name, db_user, db_password]):
+        missing_vars = [
+            var for var, value in [
+                ('DB_HOST', db_host), ('DB_PORT', db_port), ('DB_NAME', db_name),
+                ('DB_USER', db_user), ('DB_PASSWORD', db_password)
+            ] if not value
+        ]
+        raise ValueError(
+            f"Required database environment variables not set: {', '.join(missing_vars)}. "
+            f"Please set all required variables or provide DATABASE_URL."
+        )
     
     return f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 

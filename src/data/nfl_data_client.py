@@ -3,6 +3,7 @@
 import logging
 from typing import Optional, List, Dict, Any, Union
 from datetime import datetime, date
+from pathlib import Path
 import pandas as pd
 from dataclasses import dataclass
 
@@ -124,8 +125,35 @@ class NFLDataClient:
         Returns:
             DataFrame with play-by-play data
         """
+        # First try to load from extracted parquet files
+        data_dir = Path("data")
+        combined_data = []
+        
+        for season in seasons:
+            parquet_file = data_dir / f"pbp_{season}.parquet"
+            if parquet_file.exists():
+                logger.info(f"Loading play-by-play data from {parquet_file}")
+                season_data = pd.read_parquet(parquet_file)
+                
+                # Filter by weeks if specified
+                if weeks:
+                    season_data = season_data[season_data['week'].isin(weeks)]
+                    logger.info(f"Filtered to weeks {weeks}: {len(season_data)} plays")
+                
+                combined_data.append(season_data)
+                continue
+        
+        # If we got data from parquet files, return it
+        if combined_data:
+            result = pd.concat(combined_data, ignore_index=True)
+            logger.info(f"Loaded {len(result)} plays from parquet files")
+            return result
+        
+        # Fall back to nfl_data_py if available
         if not NFL_DATA_PY_AVAILABLE:
-            raise ImportError("nfl_data_py is not available. Please install it to use this functionality.")
+            logger.error("No parquet files found and nfl_data_py not available")
+            logger.info("Try running: docker-compose -f docker-compose.nfl-data.yml --profile extract up")
+            raise ImportError("No data source available. Please extract data using Docker or install nfl_data_py.")
         cache_key = f"plays_{'-'.join(map(str, sorted(seasons)))}_{weeks or 'all'}"
         if self.config.cache_enabled and cache_key in self._cache:
             logger.info("Returning cached plays data")
@@ -162,13 +190,13 @@ class NFLDataClient:
             raise
     
     def fetch_players(self, seasons: Optional[List[int]] = None) -> pd.DataFrame:
-        """Fetch NFL players data.
+        """Fetch NFL players data with comprehensive position information.
         
         Args:
             seasons: Optional list of seasons (if None, fetches current roster)
             
         Returns:
-            DataFrame with player information
+            DataFrame with player information including positions
         """
         if not NFL_DATA_PY_AVAILABLE:
             raise ImportError("nfl_data_py is not available. Please install it to use this functionality.")
@@ -178,26 +206,91 @@ class NFLDataClient:
             return self._cache[cache_key]
         
         try:
-            if seasons:
-                logger.info(f"Fetching historical players data for seasons: {seasons}")
-                # For historical data, we need to get rosters
-                players_df = pd.DataFrame()
-                for season in seasons:
-                    try:
-                        season_rosters = nfl.import_rosters([season])
-                        players_df = pd.concat([players_df, season_rosters], ignore_index=True)
-                    except Exception as e:
-                        logger.warning(f"Failed to fetch roster for season {season}: {e}")
-                        continue
-            else:
-                logger.info("Fetching current players data")
-                players_df = nfl.import_rosters([datetime.now().year])
+            # Strategy: Use seasonal rosters as primary source for position data
+            # This provides the most complete and accurate position information
+            logger.info("Fetching comprehensive player data with positions...")
+            
+            if seasons is None:
+                seasons = [2024]  # Default to current season for roster data
+            
+            # Start with seasonal rosters (has position data)
+            all_rosters = pd.DataFrame()
+            for season in seasons:
+                try:
+                    logger.info(f"Fetching roster data for season {season}...")
+                    season_rosters = nfl.import_seasonal_rosters([season])
+                    if not season_rosters.empty:
+                        season_rosters['season'] = season
+                        all_rosters = pd.concat([all_rosters, season_rosters], ignore_index=True)
+                        logger.info(f"Added {len(season_rosters)} roster records for season {season}")
+                except Exception as e:
+                    logger.warning(f"Failed to fetch roster for season {season}: {e}")
+                    continue
+            
+            if all_rosters.empty:
+                logger.warning("No roster data available, falling back to basic player data")
+                # Fallback to basic player data
+                players_df = nfl.import_players()
+                logger.info(f"Fetched {len(players_df)} players from import_players()")
+                
+                if self.config.cache_enabled:
+                    self._cache[cache_key] = players_df
+                return players_df
+            
+            # Get most recent roster info for each player (latest season)
+            logger.info("Processing roster data to get latest player information...")
+            latest_rosters = (all_rosters
+                            .sort_values(['season'], ascending=False)
+                            .groupby('player_name')
+                            .first()
+                            .reset_index())
+            
+            logger.info(f"Processed roster data: {len(latest_rosters)} unique players")
+            
+            # Get base player information for additional fields
+            try:
+                logger.info("Fetching base player information...")
+                players_df = nfl.import_players()
+                logger.info(f"Fetched {len(players_df)} base player records")
+                
+                # Merge roster data (with positions) with player data (with additional info)
+                # Use outer join to keep all players with position data
+                merged_df = latest_rosters.merge(
+                    players_df,
+                    left_on='player_name',
+                    right_on='display_name',
+                    how='left',
+                    suffixes=('_roster', '_player')
+                )
+                
+                # Prioritize roster data for key fields
+                merged_df['position'] = merged_df.get('position_roster', merged_df.get('position_player'))
+                merged_df['team'] = merged_df.get('team_roster', merged_df.get('team_player'))
+                merged_df['jersey_number'] = merged_df.get('jersey_number_roster', merged_df.get('jersey_number_player'))
+                
+                # Use player data for extended info
+                for col in ['gsis_id', 'height', 'weight', 'birth_date', 'college', 'draft_year', 'draft_round', 'draft_pick']:
+                    if col in players_df.columns:
+                        merged_df[col] = merged_df.get(f'{col}_player', merged_df.get(col))
+                
+                # Use display_name as the canonical full name
+                merged_df['display_name'] = merged_df.get('display_name', merged_df.get('player_name'))
+                
+                position_count = merged_df['position'].notna().sum()
+                logger.info(f"Successfully merged data: {len(merged_df)} players, {position_count} with positions")
+                
+                final_df = merged_df
+                
+            except Exception as e:
+                logger.warning(f"Failed to merge with base player data: {e}")
+                logger.info("Using roster data only")
+                final_df = latest_rosters
             
             if self.config.cache_enabled:
-                self._cache[cache_key] = players_df
+                self._cache[cache_key] = final_df
             
-            logger.info(f"Successfully fetched {len(players_df)} players")
-            return players_df
+            logger.info(f"Successfully fetched {len(final_df)} players with comprehensive data")
+            return final_df
             
         except Exception as e:
             logger.error(f"Failed to fetch players data: {e}")

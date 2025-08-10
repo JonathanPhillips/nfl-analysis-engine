@@ -21,10 +21,10 @@ def test_basic_endpoints():
         pass
     
     with TestClient(app) as client:
-        # Test root endpoint
-        response = client.get("/")
-        assert response.status_code == 200
-        assert "NFL Analysis Engine API" in response.text
+        # Test root endpoint redirects to web interface
+        response = client.get("/", follow_redirects=False)
+        assert response.status_code == 307  # Temporary redirect
+        assert response.headers["location"] == "/web/"
         
         # Test OpenAPI schema
         response = client.get("/openapi.json")

@@ -28,6 +28,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./models:/app/models
+      - ./src:/app/src
     depends_on:
       db:
         condition: service_healthy

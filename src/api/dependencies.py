@@ -18,6 +18,9 @@ def get_db_session(request: Request) -> Generator[Session, None, None]:
     
     try:
         yield request.state.db_session
+    except HTTPException:
+        # Let HTTPExceptions (like 404) pass through unchanged
+        raise
     except Exception as e:
         logger.error(f"Database session error: {str(e)}")
         request.state.db_session.rollback()

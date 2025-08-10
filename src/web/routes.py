@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request, Depends, Form, HTTPException, Query
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from sqlalchemy import func, case
+from sqlalchemy import func, case, text
 from datetime import date, datetime, timedelta
 from typing import Optional, List
 import logging
@@ -17,6 +17,8 @@ from ..models.play import PlayModel
 from ..analysis.models import NFLPredictor
 from ..analysis.vegas import VegasValidator
 from ..analysis.insights import InsightsGenerator
+from ..analysis.position_analytics import PositionAnalytics
+from ..analysis.team_analytics import TeamAnalyticsCalculator
 # from ..analysis.player_stats import PlayerStatsCalculator  # Temporarily disabled due to import issues
 from ..api.routers.predictions import get_predictor
 
@@ -32,10 +34,17 @@ router = APIRouter()
 async def home(request: Request, db: Session = Depends(get_db_session)):
     """Home page with dashboard overview."""
     try:
-        # Get basic stats
-        total_teams = db.query(TeamModel).count()
-        total_games = db.query(GameModel).count()
-        total_players = db.query(PlayerModel).count()
+        # Get basic stats with optimized query (single database round trip)
+        stats = db.execute(text("""
+            SELECT 
+                (SELECT COUNT(*) FROM teams) as total_teams,
+                (SELECT COUNT(*) FROM games) as total_games,
+                (SELECT COUNT(*) FROM players) as total_players
+        """)).first()
+        
+        total_teams = stats.total_teams
+        total_games = stats.total_games
+        total_players = stats.total_players
         
         # Get recent games
         recent_games = db.query(GameModel).filter(
@@ -832,141 +841,14 @@ async def league_leaders_page(
             latest_season = db.query(func.max(PlayModel.season)).scalar()
             season = latest_season or 2024
         
-        # Get QB stats with real NFL passer rating formula
-        qb_stats = []
-        qb_query = db.query(
-            PlayModel.passer_player_id,
-            PlayerModel.full_name,
-            PlayerModel.team_abbr,
-            func.count(PlayModel.id).label('attempts'),
-            func.sum(PlayModel.yards_gained).label('total_yards'),
-            func.avg(PlayModel.yards_gained).label('avg_per_attempt'),
-            func.sum(case((PlayModel.pass_touchdown.is_(True), 1), else_=0)).label('touchdowns'),
-            func.sum(case((PlayModel.interception.is_(True), 1), else_=0)).label('interceptions'),
-            func.sum(case((
-                (PlayModel.play_type == 'pass') & 
-                (PlayModel.interception.is_(False)) & 
-                (PlayModel.yards_gained >= 0), 1
-            ), else_=0)).label('completions'),
-            func.avg(PlayModel.epa).label('avg_epa')
-        ).join(
-            PlayerModel, PlayModel.passer_player_id == PlayerModel.player_id
-        ).filter(
-            PlayModel.play_type == 'pass',
-            PlayModel.season == season,
-            PlayModel.passer_player_id.isnot(None)
-        ).group_by(
-            PlayModel.passer_player_id,
-            PlayerModel.full_name, 
-            PlayerModel.team_abbr
-        ).having(func.count(PlayModel.id) >= 150).order_by(func.sum(PlayModel.yards_gained).desc()).limit(15).all()
+        # Use enhanced position analytics
+        analytics = PositionAnalytics(db)
+        position_data = analytics.get_position_leaders(season, 'all')
         
-        for stat in qb_query:
-            attempts = stat.attempts or 1
-            completions = stat.completions or 0
-            yards = stat.total_yards or 0
-            tds = stat.touchdowns or 0
-            ints = stat.interceptions or 0
-            
-            # Calculate NFL passer rating
-            comp_pct = (completions / attempts) * 100 if attempts > 0 else 0
-            ypa = yards / attempts if attempts > 0 else 0
-            td_pct = (tds / attempts) * 100 if attempts > 0 else 0
-            int_pct = (ints / attempts) * 100 if attempts > 0 else 0
-            
-            # NFL passer rating formula components
-            a = max(0, min(2.375, ((comp_pct - 30) * 0.05)))
-            b = max(0, min(2.375, ((ypa - 3) * 0.25)))
-            c = max(0, min(2.375, (td_pct * 0.2)))
-            d = max(0, min(2.375, (2.375 - (int_pct * 0.25))))
-            
-            passer_rating = ((a + b + c + d) / 6) * 100
-            
-            qb_stats.append({
-                'player_name': stat.full_name,
-                'team': stat.team_abbr,
-                'attempts': attempts,
-                'completion_pct': round(comp_pct, 1),
-                'passing_yards': int(yards),
-                'passing_tds': tds,
-                'interceptions': ints,
-                'passer_rating': round(passer_rating, 1),
-                'yards_per_attempt': round(ypa, 1),
-                'avg_epa': round(stat.avg_epa or 0, 3)
-            })
-        
-        # Get RB stats
-        rb_stats = []
-        rb_query = db.query(
-            PlayModel.rusher_player_id,
-            PlayerModel.full_name,
-            PlayerModel.team_abbr,
-            func.count(PlayModel.id).label('carries'),
-            func.sum(PlayModel.yards_gained).label('total_yards'),
-            func.avg(PlayModel.yards_gained).label('avg_per_carry'),
-            func.sum(case((PlayModel.rush_touchdown.is_(True), 1), else_=0)).label('touchdowns'),
-            func.max(PlayModel.yards_gained).label('longest'),
-            func.avg(PlayModel.epa).label('avg_epa')
-        ).join(
-            PlayerModel, PlayModel.rusher_player_id == PlayerModel.player_id
-        ).filter(
-            PlayModel.play_type == 'run',
-            PlayModel.season == season,
-            PlayModel.rusher_player_id.isnot(None)
-        ).group_by(
-            PlayModel.rusher_player_id,
-            PlayerModel.full_name,
-            PlayerModel.team_abbr
-        ).having(func.count(PlayModel.id) >= 75).order_by(func.sum(PlayModel.yards_gained).desc()).limit(15).all()
-        
-        for stat in rb_query:
-            rb_stats.append({
-                'player_name': stat.full_name,
-                'team': stat.team_abbr,
-                'carries': stat.carries or 0,
-                'rushing_yards': int(stat.total_yards or 0),
-                'rushing_tds': stat.touchdowns or 0,
-                'yards_per_carry': round(stat.avg_per_carry or 0, 1),
-                'longest_run': stat.longest or 0,
-                'avg_epa': round(stat.avg_epa or 0, 3)
-            })
-        
-        # Get WR stats
-        wr_stats = []
-        wr_query = db.query(
-            PlayModel.receiver_player_id,
-            PlayerModel.full_name,
-            PlayerModel.team_abbr,
-            func.count(PlayModel.id).label('catches'),
-            func.sum(PlayModel.yards_gained).label('total_yards'),
-            func.avg(PlayModel.yards_gained).label('avg_per_catch'),
-            func.sum(case((PlayModel.pass_touchdown.is_(True), 1), else_=0)).label('touchdowns'),
-            func.avg(PlayModel.epa).label('avg_epa')
-        ).join(
-            PlayerModel, PlayModel.receiver_player_id == PlayerModel.player_id
-        ).filter(
-            PlayModel.play_type == 'pass',
-            PlayModel.interception.is_(False),
-            PlayModel.yards_gained >= 0,
-            PlayModel.season == season,
-            PlayModel.receiver_player_id.isnot(None)
-        ).group_by(
-            PlayModel.receiver_player_id,
-            PlayerModel.full_name,
-            PlayerModel.team_abbr
-        ).having(func.count(PlayModel.id) >= 30).order_by(func.sum(PlayModel.yards_gained).desc()).limit(15).all()
-        
-        for stat in wr_query:
-            wr_stats.append({
-                'player_name': stat.full_name,
-                'team': stat.team_abbr,
-                'catches': stat.catches or 0,
-                'receiving_yards': int(stat.total_yards or 0),
-                'receiving_tds': stat.touchdowns or 0,
-                'yards_per_catch': round(stat.avg_per_catch or 0, 1),
-                'avg_epa': round(stat.avg_epa or 0, 3),
-                'targets': stat.catches or 0  # Placeholder
-            })
+        # Convert dataclass objects to dictionaries for template
+        qb_stats = position_data.get('quarterbacks', [])
+        rb_stats = position_data.get('running_backs', [])
+        wr_stats = position_data.get('receivers', [])
         
         # Build leaders data
         leaders_data = {
@@ -1253,6 +1135,50 @@ async def game_detail_page(request: Request, game_id: str, db: Session = Depends
         return templates.TemplateResponse("error.html", {
             "request": request,
             "error": "Failed to load game details"
+        })
+
+
+@router.get("/team-analytics", response_class=HTMLResponse)
+async def team_analytics_page(
+    request: Request,
+    season: Optional[int] = Query(None),
+    category: Optional[str] = Query("overview"),
+    db: Session = Depends(get_db_session)
+):
+    """Advanced team analytics page with comprehensive team performance metrics."""
+    try:
+        # Default to current season
+        if not season:
+            latest_season = db.query(func.max(PlayModel.season)).scalar()
+            season = latest_season or 2024
+        
+        # Calculate team analytics
+        analytics_calc = TeamAnalyticsCalculator(db)
+        team_analytics = analytics_calc.calculate_team_analytics(season)
+        
+        # Get team rankings
+        rankings = analytics_calc.get_team_rankings(season)
+        
+        # Get available seasons
+        available_seasons = db.query(PlayModel.season).distinct().order_by(PlayModel.season.desc()).all()
+        available_seasons = [s[0] for s in available_seasons if s[0]]
+        
+        return templates.TemplateResponse("team_analytics.html", {
+            "request": request,
+            "team_analytics": team_analytics,
+            "rankings": rankings,
+            "season": season,
+            "category": category,
+            "available_seasons": available_seasons
+        })
+        
+    except Exception as e:
+        logger.error(f"Error loading team analytics: {e}")
+        import traceback
+        traceback.print_exc()
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "error": f"Failed to load team analytics: {str(e)}"
         })
 
 

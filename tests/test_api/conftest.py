@@ -68,7 +68,48 @@ def test_client(test_session):
             test_session.rollback()
             raise
     
-    app = create_app()
+    # Create app without database middleware for testing
+    from fastapi import FastAPI
+    from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.responses import RedirectResponse
+    from src.api.routers import teams, players, games, plays, predictions, data, vegas
+    from src.api import insights
+    from src.web.routes import router as web_router
+    
+    app = FastAPI(
+        title="NFL Analysis Engine",
+        description="Professional-grade NFL data analysis and prediction API",
+        version="1.0.0",
+        docs_url="/api/docs",
+        redoc_url="/api/redoc",
+    )
+    
+    # Add CORS middleware (but skip database middleware for tests)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:3000", "http://localhost:8000"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    
+    # Include routers
+    app.include_router(teams.router, prefix="/api/v1/teams", tags=["teams"])
+    app.include_router(players.router, prefix="/api/v1/players", tags=["players"])
+    app.include_router(games.router, prefix="/api/v1/games", tags=["games"])
+    app.include_router(plays.router, prefix="/api/v1/plays", tags=["plays"])
+    app.include_router(predictions.router, prefix="/api/v1/predictions", tags=["predictions"])
+    app.include_router(vegas.router, prefix="/api/v1/vegas", tags=["vegas"])
+    app.include_router(data.router, prefix="/api/v1/data", tags=["data"])
+    app.include_router(insights.router, prefix="/api/v1", tags=["insights"])
+    app.include_router(web_router, prefix="/web", include_in_schema=False)
+    
+    @app.get("/")
+    async def root():
+        """Redirect to web interface."""
+        return RedirectResponse(url="/web/")
+    
+    # Override database dependency
     app.dependency_overrides[get_db_session] = override_get_db_session
     
     with TestClient(app) as client:
@@ -140,9 +181,6 @@ def sample_game_data():
         "away_team": "SF",
         "home_score": 24,
         "away_score": 21,
-        "total": 45,
-        "overtime": False,
-        "stadium": "Arrowhead Stadium",
         "roof": "outdoors",
         "surface": "grass"
     }
@@ -180,7 +218,6 @@ def sample_play_data():
         "yardline_100": 75,
         "yards_gained": 12,
         "touchdown": False,
-        "first_down": True,
         "ep": 1.2,
         "epa": 0.8,
         "wp": 0.52,

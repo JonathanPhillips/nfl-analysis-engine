@@ -39,10 +39,10 @@ class TestDataAPI:
         # Mock data loader and result
         mock_loader = Mock()
         mock_result = Mock()
-        mock_result.records_loaded = 32
+        mock_result.records_inserted = 32
         mock_result.records_updated = 0
         mock_result.records_skipped = 0
-        mock_result.duration.total_seconds.return_value = 5.2
+        mock_result.duration = 5.2
         mock_result.errors = []
         
         mock_loader.load_teams.return_value = mock_result
@@ -58,17 +58,17 @@ class TestDataAPI:
         assert data["result"]["duration_seconds"] == 5.2
         
         # Verify loader was called correctly
-        mock_loader.load_teams.assert_called_once_with(force_refresh=False)
+        mock_loader.load_teams.assert_called_once()
     
     @patch('src.api.routers.data.get_data_loader')
     def test_load_teams_data_with_force_refresh(self, mock_get_loader, test_client):
         """Test teams data loading with force refresh."""
         mock_loader = Mock()
         mock_result = Mock()
-        mock_result.records_loaded = 32
+        mock_result.records_inserted = 32
         mock_result.records_updated = 5
         mock_result.records_skipped = 0
-        mock_result.duration.total_seconds.return_value = 8.1
+        mock_result.duration = 8.1
         mock_result.errors = []
         
         mock_loader.load_teams.return_value = mock_result
@@ -77,17 +77,17 @@ class TestDataAPI:
         response = test_client.post("/api/v1/data/load/teams?force_refresh=true")
         
         assert response.status_code == 200
-        mock_loader.load_teams.assert_called_once_with(force_refresh=True)
+        mock_loader.load_teams.assert_called_once()
     
     @patch('src.api.routers.data.get_data_loader')
     def test_load_players_data_success(self, mock_get_loader, test_client):
         """Test successful players data loading."""
         mock_loader = Mock()
         mock_result = Mock()
-        mock_result.records_loaded = 1500
+        mock_result.records_inserted = 1500
         mock_result.records_updated = 50
         mock_result.records_skipped = 10
-        mock_result.duration.total_seconds.return_value = 30.5
+        mock_result.duration = 30.5
         mock_result.errors = []
         
         mock_loader.load_players.return_value = mock_result
@@ -101,17 +101,17 @@ class TestDataAPI:
         assert "Loaded 1500 players" in data["message"]
         
         # Verify loader was called with default parameters
-        mock_loader.load_players.assert_called_once_with(seasons=None, force_refresh=False)
+        mock_loader.load_players.assert_called_once_with(seasons=None)
     
     @patch('src.api.routers.data.get_data_loader')
     def test_load_players_data_with_seasons(self, mock_get_loader, test_client):
         """Test players data loading with specific seasons."""
         mock_loader = Mock()
         mock_result = Mock()
-        mock_result.records_loaded = 800
+        mock_result.records_inserted = 800
         mock_result.records_updated = 0
         mock_result.records_skipped = 0
-        mock_result.duration.total_seconds.return_value = 15.2
+        mock_result.duration = 15.2
         mock_result.errors = []
         
         mock_loader.load_players.return_value = mock_result
@@ -120,7 +120,7 @@ class TestDataAPI:
         response = test_client.post("/api/v1/data/load/players?seasons=2022,2023")
         
         assert response.status_code == 200
-        mock_loader.load_players.assert_called_once_with(seasons=[2022, 2023], force_refresh=False)
+        mock_loader.load_players.assert_called_once_with(seasons=[2022, 2023])
     
     def test_load_players_data_invalid_seasons(self, test_client):
         """Test players data loading with invalid seasons parameter."""
@@ -135,10 +135,10 @@ class TestDataAPI:
         """Test successful games data loading."""
         mock_loader = Mock()
         mock_result = Mock()
-        mock_result.records_loaded = 272
+        mock_result.records_inserted = 272
         mock_result.records_updated = 12
         mock_result.records_skipped = 5
-        mock_result.duration.total_seconds.return_value = 45.8
+        mock_result.duration = 45.8
         mock_result.errors = ["Minor error 1"]
         
         mock_loader.load_games.return_value = mock_result
@@ -151,7 +151,7 @@ class TestDataAPI:
         assert data["status"] == "success"
         assert data["result"]["errors"] == ["Minor error 1"]
         
-        mock_loader.load_games.assert_called_once_with(seasons=[2023], force_refresh=False)
+        mock_loader.load_games.assert_called_once_with(seasons=[2023])
     
     @patch('src.api.routers.data.DataValidationPipeline')
     def test_validate_data_teams(self, mock_pipeline_class, test_client, sample_team):

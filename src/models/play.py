@@ -2,7 +2,7 @@
 
 from typing import Optional
 from decimal import Decimal
-from sqlalchemy import Column, String, Integer, Boolean, Text, Numeric, ForeignKey
+from sqlalchemy import Column, String, Integer, Boolean, Text, Numeric, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from pydantic import BaseModel as PydanticBaseModel, Field, field_validator, ConfigDict
 from src.models.base import BaseModel as SQLBaseModel, BasePydanticModel
@@ -17,7 +17,7 @@ class PlayModel(SQLBaseModel):
     __tablename__ = "plays"
     
     # Primary identifiers
-    play_id = Column(String(30), unique=True, nullable=False, index=True)
+    play_id = Column(String(30), nullable=False, index=True)
     game_id = Column(String(20), ForeignKey('games.game_id'), nullable=False, index=True)
     
     # Game context
@@ -72,6 +72,12 @@ class PlayModel(SQLBaseModel):
     fumble = Column(Boolean, default=False)
     safety = Column(Boolean, default=False)
     penalty = Column(Boolean, default=False)
+    first_down = Column(Boolean, default=False)  # Whether play resulted in first down
+    
+    # Table constraints - unique play within each game
+    __table_args__ = (
+        UniqueConstraint('game_id', 'play_id', name='uq_play_game_play_id'),
+    )
     
     # Relationships
     game = relationship("GameModel", back_populates="plays")

@@ -74,7 +74,7 @@
                             </thead>
                             <tbody>
                                 {% for game in games %}
-                                <tr>
+                                <tr class="clickable-row" data-href="/web/game/{{ game.game_id }}" style="cursor: pointer;">
                                     <td>
                                         <strong>{{ game.game_date.strftime('%m/%d/%Y') }}</strong><br>
                                         <small class="text-muted">{{ game.game_date.strftime('%A') }}</small>
@@ -162,8 +162,13 @@
                         </div>
                         <div class="col-md-3">
                             {% if completed_games %}
-                                {% set avg_total = (completed_games|map(attribute='total_score')|select|sum / completed_games|selectattr('total_score', 'ne', none)|list|length)|round(1) %}
-                                <h4 class="text-info">{{ avg_total }}</h4>
+                                {% set games_with_totals = completed_games|selectattr('total_score', 'ne', none)|list %}
+                                {% if games_with_totals %}
+                                    {% set avg_total = (games_with_totals|map(attribute='total_score')|sum / games_with_totals|length)|round(1) %}
+                                    <h4 class="text-info">{{ avg_total }}</h4>
+                                {% else %}
+                                    <h4 class="text-muted">-</h4>
+                                {% endif %}
                                 <small class="text-muted">Avg Total Points</small>
                             {% else %}
                                 <h4 class="text-muted">-</h4>
@@ -171,8 +176,13 @@
                             {% endif %}
                         </div>
                         <div class="col-md-3">
-                            {% set home_wins = completed_games|selectattr('home_score', '>', 'away_score')|list|length %}
-                            {% if completed_games %}
+                            {% if completed_games and completed_games|length > 0 %}
+                                {% set home_wins = 0 %}
+                                {% for game in completed_games %}
+                                    {% if game.home_score and game.away_score and game.home_score > game.away_score %}
+                                        {% set home_wins = home_wins + 1 %}
+                                    {% endif %}
+                                {% endfor %}
                                 {% set home_win_pct = (home_wins / completed_games|length * 100)|round(1) %}
                                 <h4 class="text-primary">{{ home_win_pct }}%</h4>
                             {% else %}
@@ -200,4 +210,30 @@
         </div>
     </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Make game rows clickable
+    const clickableRows = document.querySelectorAll('.clickable-row');
+    clickableRows.forEach(row => {
+        row.addEventListener('click', function() {
+            const href = this.dataset.href;
+            if (href) {
+                window.location.href = href;
+            }
+        });
+        
+        // Add hover effect
+        row.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#f8f9fa';
+        });
+        
+        row.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+    });
+});
+</script>
 {% endblock %}

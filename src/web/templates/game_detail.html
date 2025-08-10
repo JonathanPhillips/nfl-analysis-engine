@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block title %}{{ away_team.team_name }} @ {{ home_team.team_name }} - NFL Analysis Engine{% endblock %}
+
+{% block content %}
+<!-- Game Header -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-4 text-center">
+                        <h3 class="mb-1">{{ away_team.team_name }} {{ away_team.team_nick }}</h3>
+                        <span class="badge bg-light text-dark">{{ game.away_team }}</span>
+                        {% if game.away_score is not none %}
+                            <h1 class="mt-2 {% if game.away_score > game.home_score %}text-warning{% endif %}">{{ game.away_score }}</h1>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <h5 class="mb-1">@ vs</h5>
+                        <p class="mb-1">{{ game.game_date.strftime('%B %d, %Y') }}</p>
+                        <small>{{ game.game_date.strftime('%A') }}</small>
+                        {% if game.week %}
+                            <br><span class="badge bg-warning text-dark mt-2">Week {{ game.week }}</span>
+                        {% endif %}
+                        {% if game.season_type %}
+                            <span class="badge {% if game.season_type == 'POST' %}bg-danger{% elif game.season_type == 'REG' %}bg-success{% else %}bg-secondary{% endif %} mt-2">{{ game.season_type }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <h3 class="mb-1">{{ home_team.team_name }} {{ home_team.team_nick }}</h3>
+                        <span class="badge bg-light text-dark">{{ game.home_team }}</span>
+                        {% if game.home_score is not none %}
+                            <h1 class="mt-2 {% if game.home_score > game.away_score %}text-warning{% endif %}">{{ game.home_score }}</h1>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if game_stats.winner %}
+                    <div class="text-center mt-3">
+                        <h4 class="text-warning">
+                            <i class="fas fa-trophy me-2"></i>
+                            Winner: {{ game_stats.winner }}
+                        </h4>
+                        {% if game_stats.is_overtime %}
+                            <span class="badge bg-warning text-dark">OVERTIME</span>
+                        {% endif %}
+                    </div>
+                {% elif game.home_score is none %}
+                    <div class="text-center mt-3">
+                        <span class="badge bg-warning fs-5">UPCOMING GAME</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Game Statistics -->
+{% if game.home_score is not none and game.away_score is not none %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Game Statistics
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <h4 class="text-primary">{{ game_stats.total_points or '-' }}</h4>
+                        <small class="text-muted">Total Points</small>
+                    </div>
+                    <div class="col-md-3">
+                        <h4 class="text-info">{{ game_stats.point_differential or '-' }}</h4>
+                        <small class="text-muted">Point Differential</small>
+                    </div>
+                    <div class="col-md-3">
+                        {% if game.total_line %}
+                            <h4 class="text-success">{{ game.total_line }}</h4>
+                            <small class="text-muted">O/U Line</small>
+                        {% else %}
+                            <h4 class="text-muted">-</h4>
+                            <small class="text-muted">O/U Line</small>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3">
+                        {% if game.home_spread %}
+                            <h4 class="text-warning">{{ game.home_spread }}</h4>
+                            <small class="text-muted">{{ game.home_team }} Spread</small>
+                        {% else %}
+                            <h4 class="text-muted">-</h4>
+                            <small class="text-muted">Spread</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Game Details -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Game Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th width="40%">Season:</th>
+                        <td>{{ game.season }}</td>
+                    </tr>
+                    <tr>
+                        <th>Week:</th>
+                        <td>{{ game.week or 'N/A' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Date:</th>
+                        <td>{{ game.game_date.strftime('%B %d, %Y (%A)') }}</td>
+                    </tr>
+                    {% if game.kickoff_time %}
+                    <tr>
+                        <th>Kickoff:</th>
+                        <td>{{ game.kickoff_time.strftime('%I:%M %p') }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <th>Game ID:</th>
+                        <td><code>{{ game.game_id }}</code></td>
+                    </tr>
+                    {% if game.old_game_id %}
+                    <tr>
+                        <th>Legacy ID:</th>
+                        <td><code>{{ game.old_game_id }}</code></td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cloud-sun me-2"></i>Game Conditions
+                </h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th width="40%">Roof:</th>
+                        <td>{{ game.roof|title or 'N/A' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Surface:</th>
+                        <td>{{ game.surface|title or 'N/A' }}</td>
+                    </tr>
+                    {% if game.temp %}
+                    <tr>
+                        <th>Temperature:</th>
+                        <td>{{ game.temp }}°F</td>
+                    </tr>
+                    {% endif %}
+                    {% if game.wind %}
+                    <tr>
+                        <th>Wind:</th>
+                        <td>{{ game.wind }} mph</td>
+                    </tr>
+                    {% endif %}
+                    {% if not game.temp and not game.wind %}
+                    <tr>
+                        <td colspan="2" class="text-muted text-center">
+                            <em>Weather data not available</em>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Head-to-Head History -->
+{% if head_to_head %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-history me-2"></i>Recent Head-to-Head (Last 5 Games)
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Matchup</th>
+                                <th>Score</th>
+                                <th>Winner</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for h2h_game in head_to_head %}
+                            <tr>
+                                <td>{{ h2h_game.game_date.strftime('%m/%d/%Y') }}</td>
+                                <td>{{ h2h_game.away_team }} @ {{ h2h_game.home_team }}</td>
+                                <td>
+                                    <span class="badge {% if h2h_game.away_score > h2h_game.home_score %}bg-success{% else %}bg-secondary{% endif %} me-1">
+                                        {{ h2h_game.away_score }}
+                                    </span>
+                                    -
+                                    <span class="badge {% if h2h_game.home_score > h2h_game.away_score %}bg-success{% else %}bg-secondary{% endif %} ms-1">
+                                        {{ h2h_game.home_score }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if h2h_game.home_score > h2h_game.away_score %}
+                                        <strong>{{ h2h_game.home_team }}</strong>
+                                    {% else %}
+                                        <strong>{{ h2h_game.away_team }}</strong>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Action Buttons -->
+<div class="row mb-4">
+    <div class="col-12 text-center">
+        <a href="/web/games" class="btn btn-primary me-3">
+            <i class="fas fa-arrow-left me-2"></i>Back to Games
+        </a>
+        {% if game.home_score is not none %}
+            <a href="/web/insights/game/{{ game.game_id }}" class="btn btn-info me-3">
+                <i class="fas fa-chart-line me-2"></i>Game Insights
+            </a>
+        {% endif %}
+        <a href="/web/team/{{ game.home_team }}" class="btn btn-outline-primary me-2">
+            <i class="fas fa-users me-2"></i>{{ game.home_team }} Team
+        </a>
+        <a href="/web/team/{{ game.away_team }}" class="btn btn-outline-primary">
+            <i class="fas fa-users me-2"></i>{{ game.away_team }} Team
+        </a>
+    </div>
+</div>
+{% endblock %}

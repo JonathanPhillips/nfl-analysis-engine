@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  nfl-data-extractor:
+    build:
+      context: .
+      dockerfile: Dockerfile.data
+    volumes:
+      - ./data:/app/data
+    environment:
+      - TZ=America/New_York
+    command: python extract_nfl_data.py
+    
+  # One-time data extraction service
+  extract-data:
+    build:
+      context: .
+      dockerfile: Dockerfile.data
+    volumes:
+      - ./data:/app/data
+    environment:
+      - TZ=America/New_York
+    profiles:
+      - extract
+    command: python extract_nfl_data.py

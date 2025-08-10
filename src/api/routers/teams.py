@@ -116,3 +116,83 @@ async def get_team_stats(
     except Exception as e:
         logger.error(f"Unexpected error in get_team_stats: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+class TeamUpdate(BaseModel):
+    """Schema for team update requests."""
+    team_name: Optional[str] = Field(None, description="Team name")
+    team_nick: Optional[str] = Field(None, description="Team nickname")
+    team_conf: Optional[str] = Field(None, description="Conference (AFC/NFC)")
+    team_division: Optional[str] = Field(None, description="Division (North/South/East/West)")
+    team_color: Optional[str] = Field(None, description="Primary team color")
+    team_color2: Optional[str] = Field(None, description="Secondary team color")
+    team_logo_espn: Optional[str] = Field(None, description="ESPN logo URL")
+    team_logo_wikipedia: Optional[str] = Field(None, description="Wikipedia logo URL")
+
+
+@router.put("/{team_id}", response_model=TeamResponse)
+async def update_team(
+    team_id: int,
+    team_update: TeamUpdate,
+    db: Session = Depends(get_db_session)
+):
+    """Update a team by ID."""
+    try:
+        team = db.query(Team).filter(Team.id == team_id).first()
+        
+        if not team:
+            raise HTTPException(status_code=404, detail=f"Team with ID {team_id} not found")
+        
+        # Update fields that were provided
+        update_data = team_update.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            if hasattr(team, field):
+                setattr(team, field, value)
+        
+        db.commit()
+        db.refresh(team)
+        
+        logger.info(f"Updated team {team.team_abbr} (ID: {team_id})")
+        return TeamResponse.model_validate(team)
+    
+    except HTTPException:
+        raise
+    except SQLAlchemyError as e:
+        logger.error(f"Database error in update_team: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Database error")
+    except Exception as e:
+        logger.error(f"Unexpected error in update_team: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.delete("/{team_id}")
+async def delete_team(
+    team_id: int,
+    db: Session = Depends(get_db_session)
+):
+    """Delete a team by ID."""
+    try:
+        team = db.query(Team).filter(Team.id == team_id).first()
+        
+        if not team:
+            raise HTTPException(status_code=404, detail=f"Team with ID {team_id} not found")
+        
+        team_abbr = team.team_abbr
+        db.delete(team)
+        db.commit()
+        
+        logger.info(f"Deleted team {team_abbr} (ID: {team_id})")
+        return {"message": f"Team {team_abbr} deleted successfully"}
+    
+    except HTTPException:
+        raise
+    except SQLAlchemyError as e:
+        logger.error(f"Database error in delete_team: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Database error")
+    except Exception as e:
+        logger.error(f"Unexpected error in delete_team: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal server error")

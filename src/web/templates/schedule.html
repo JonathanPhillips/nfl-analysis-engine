@@ -1,0 +1,661 @@
+{% extends "base.html" %}
+
+{% block title %}NFL Schedule & Upcoming Games{% endblock %}
+
+{% block extra_css %}
+<style>
+    .schedule-header {
+        background: linear-gradient(135deg, var(--nfl-blue), #1e4a6b);
+        color: white;
+        padding: 2.5rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0 0 15px 15px;
+    }
+    
+    .week-selector {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 1.5rem;
+        backdrop-filter: blur(10px);
+    }
+    
+    .week-btn {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        margin: 0.2rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        min-width: 60px;
+    }
+    
+    .week-btn:hover,
+    .week-btn.active {
+        background: white;
+        color: var(--nfl-blue);
+        border-color: white;
+        transform: translateY(-2px);
+    }
+    
+    .game-card {
+        background: white;
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .game-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+    
+    .game-card.completed::before {
+        content: 'FINAL';
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: var(--success-green);
+        color: white;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: bold;
+        z-index: 2;
+    }
+    
+    .game-card.live::before {
+        content: 'LIVE';
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: var(--nfl-red);
+        color: white;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: bold;
+        z-index: 2;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+    
+    .team-info {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+    }
+    
+    .team-logo {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1rem;
+        margin-right: 1rem;
+        color: var(--nfl-blue);
+    }
+    
+    .team-name {
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: #333;
+    }
+    
+    .team-record {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .game-time {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+        margin: 0 1rem;
+        min-width: 120px;
+    }
+    
+    .game-date {
+        font-weight: 600;
+        color: var(--nfl-blue);
+        margin-bottom: 0.25rem;
+    }
+    
+    .game-time-text {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .score {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: var(--nfl-blue);
+    }
+    
+    .prediction-badge {
+        background: linear-gradient(135deg, #74b9ff, #0984e3);
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+    
+    .betting-line {
+        background: linear-gradient(135deg, #fdcb6e, #e17055);
+        color: white;
+        padding: 0.2rem 0.6rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-top: 0.25rem;
+    }
+    
+    .week-summary {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .calendar-view {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .calendar-day {
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 0.5rem;
+        min-height: 80px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    
+    .calendar-day:hover {
+        background: #f8f9fa;
+    }
+    
+    .calendar-day.has-games {
+        background: linear-gradient(135deg, rgba(116, 185, 255, 0.1), rgba(9, 132, 227, 0.1));
+        border-color: #74b9ff;
+    }
+    
+    .calendar-date {
+        font-weight: bold;
+        color: var(--nfl-blue);
+        margin-bottom: 0.25rem;
+    }
+    
+    .calendar-games {
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
+    
+    .view-toggle {
+        background: white;
+        border-radius: 10px;
+        padding: 0.5rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        display: inline-flex;
+        margin-bottom: 2rem;
+    }
+    
+    .view-toggle button {
+        background: none;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .view-toggle button.active {
+        background: var(--nfl-blue);
+        color: white;
+    }
+    
+    .loading-skeleton {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+        border-radius: 8px;
+    }
+    
+    @keyframes loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Schedule Header -->
+<div class="schedule-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h1 class="mb-3">
+                    <i class="fas fa-calendar-alt me-3"></i>NFL Schedule
+                </h1>
+                <p class="lead mb-0">View upcoming games, schedules, and predictions</p>
+            </div>
+            <div class="col-lg-4 text-end">
+                <div class="week-summary">
+                    <h4 class="text-primary mb-1">Week {{ current_week|default('--') }}</h4>
+                    <p class="mb-0 text-muted">{{ upcoming_games|length }} upcoming games</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Week Selector -->
+        <div class="week-selector mt-4">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex flex-wrap justify-content-center justify-md-start">
+                        {% for week_num in available_weeks %}
+                        <button class="week-btn {{ 'active' if week_num == current_week else '' }}" 
+                                onclick="selectWeek({{ week_num }})">
+                            Week {{ week_num }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="col-md-4 text-end mt-3 mt-md-0">
+                    <div class="view-toggle">
+                        <button class="active" onclick="switchView('list')" id="listViewBtn">
+                            <i class="fas fa-list me-1"></i>List
+                        </button>
+                        <button onclick="switchView('calendar')" id="calendarViewBtn">
+                            <i class="fas fa-calendar me-1"></i>Calendar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="container">
+    <!-- List View -->
+    <div id="listView">
+        {% if upcoming_games %}
+        <div class="row g-4">
+            {% for game in upcoming_games %}
+            <div class="col-12">
+                <div class="game-card {{ 'completed' if game.home_score is not none else 'upcoming' }}" 
+                     onclick="viewGameDetail('{{ game.game_id }}')">
+                    <div class="row align-items-center g-0">
+                        <!-- Away Team -->
+                        <div class="col-md-4">
+                            <div class="team-info">
+                                <div class="team-logo">
+                                    {{ game.away_team }}
+                                </div>
+                                <div>
+                                    <div class="team-name">{{ away_team_info.team_name if away_team_info else game.away_team }}</div>
+                                    <div class="team-record">{{ away_team_record|default('--') }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Game Info -->
+                        <div class="col-md-4">
+                            <div class="game-time">
+                                {% if game.home_score is not none and game.away_score is not none %}
+                                <!-- Completed Game -->
+                                <div class="score">{{ game.away_score }} - {{ game.home_score }}</div>
+                                <div class="game-date">{{ game.game_date.strftime("%b %d") }}</div>
+                                <div class="game-time-text">Final</div>
+                                {% else %}
+                                <!-- Upcoming Game -->
+                                <div class="game-date">{{ game.game_date.strftime("%b %d, %Y") }}</div>
+                                <div class="game-time-text">
+                                    {% if game.game_time %}{{ game.game_time }}{% else %}TBD{% endif %}
+                                </div>
+                                {% if prediction %}
+                                <div class="prediction-badge">
+                                    Predicted: {{ prediction.predicted_winner }} by {{ prediction.margin }}
+                                </div>
+                                {% endif %}
+                                {% if betting_line %}
+                                <div class="betting-line">
+                                    Line: {{ betting_line }}
+                                </div>
+                                {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Home Team -->
+                        <div class="col-md-4">
+                            <div class="team-info justify-content-end">
+                                <div class="text-end me-3">
+                                    <div class="team-name">{{ home_team_info.team_name if home_team_info else game.home_team }}</div>
+                                    <div class="team-record">{{ home_team_record|default('--') }}</div>
+                                </div>
+                                <div class="team-logo">
+                                    {{ game.home_team }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Load More Games -->
+        <div class="text-center mt-4">
+            <button class="btn btn-outline-primary btn-lg" onclick="loadMoreGames()">
+                <i class="fas fa-plus me-2"></i>Load More Games
+            </button>
+        </div>
+        
+        {% else %}
+        <!-- No Games Message -->
+        <div class="text-center py-5">
+            <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+            <h3>No Games Scheduled</h3>
+            <p class="text-muted">No games found for the selected week.</p>
+            <button class="btn btn-primary" onclick="selectWeek({{ available_weeks[0] if available_weeks else 1 }})">
+                View Current Week
+            </button>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Calendar View -->
+    <div id="calendarView" class="d-none">
+        <div class="calendar-view">
+            <div class="row mb-3">
+                <div class="col-6">
+                    <button class="btn btn-outline-primary" onclick="previousMonth()">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </button>
+                </div>
+                <div class="col-6 text-end">
+                    <button class="btn btn-outline-primary" onclick="nextMonth()">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <h4 class="text-center mb-4" id="calendarTitle">{{ current_month_year|default('Schedule') }}</h4>
+            
+            <!-- Calendar Grid -->
+            <div class="row g-1 mb-2">
+                <div class="col text-center fw-bold text-muted">Sun</div>
+                <div class="col text-center fw-bold text-muted">Mon</div>
+                <div class="col text-center fw-bold text-muted">Tue</div>
+                <div class="col text-center fw-bold text-muted">Wed</div>
+                <div class="col text-center fw-bold text-muted">Thu</div>
+                <div class="col text-center fw-bold text-muted">Fri</div>
+                <div class="col text-center fw-bold text-muted">Sat</div>
+            </div>
+            
+            <div id="calendarGrid">
+                <!-- Calendar days will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading State -->
+    <div id="loadingState" class="d-none">
+        <div class="row g-4">
+            {% for i in range(5) %}
+            <div class="col-12">
+                <div class="game-card">
+                    <div class="row align-items-center g-0">
+                        <div class="col-md-4">
+                            <div class="team-info">
+                                <div class="loading-skeleton me-3" style="width: 50px; height: 50px; border-radius: 50%;"></div>
+                                <div>
+                                    <div class="loading-skeleton mb-2" style="width: 120px; height: 20px;"></div>
+                                    <div class="loading-skeleton" style="width: 80px; height: 16px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="game-time">
+                                <div class="loading-skeleton mx-auto mb-2" style="width: 80px; height: 24px;"></div>
+                                <div class="loading-skeleton mx-auto" style="width: 60px; height: 16px;"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="team-info justify-content-end">
+                                <div class="text-end me-3">
+                                    <div class="loading-skeleton mb-2" style="width: 120px; height: 20px;"></div>
+                                    <div class="loading-skeleton" style="width: 80px; height: 16px;"></div>
+                                </div>
+                                <div class="loading-skeleton" style="width: 50px; height: 50px; border-radius: 50%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentWeek = {{ current_week|default(1) }};
+let currentMonth = {{ current_month|default('new Date().getMonth()') }};
+let currentYear = {{ current_year|default('new Date().getFullYear()') }};
+let currentView = 'list';
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    initializeSchedule();
+});
+
+function initializeSchedule() {
+    // Set active week button
+    updateWeekButtons();
+    
+    // Load initial data
+    if (currentView === 'calendar') {
+        generateCalendar();
+    }
+}
+
+function selectWeek(weekNum) {
+    if (currentWeek === weekNum) return;
+    
+    currentWeek = weekNum;
+    updateWeekButtons();
+    loadWeekGames(weekNum);
+}
+
+function updateWeekButtons() {
+    document.querySelectorAll('.week-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (parseInt(btn.textContent.replace('Week ', '')) === currentWeek) {
+            btn.classList.add('active');
+        }
+    });
+}
+
+function switchView(view) {
+    currentView = view;
+    
+    // Update view toggle buttons
+    document.querySelectorAll('.view-toggle button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    if (view === 'list') {
+        document.getElementById('listViewBtn').classList.add('active');
+        document.getElementById('listView').classList.remove('d-none');
+        document.getElementById('calendarView').classList.add('d-none');
+    } else {
+        document.getElementById('calendarViewBtn').classList.add('active');
+        document.getElementById('listView').classList.add('d-none');
+        document.getElementById('calendarView').classList.remove('d-none');
+        generateCalendar();
+    }
+}
+
+async function loadWeekGames(week) {
+    try {
+        showLoading(true);
+        
+        const response = await fetch(`/api/games?week=${week}&season=2024`);
+        const data = await response.json();
+        
+        if (data.success) {
+            renderGames(data.games);
+        } else {
+            showError('Failed to load games for this week');
+        }
+    } catch (error) {
+        console.error('Error loading week games:', error);
+        showError('Network error loading games');
+    } finally {
+        showLoading(false);
+    }
+}
+
+function renderGames(games) {
+    // Implementation would render games dynamically
+    // For now, this is handled server-side via template reload
+    window.location.href = `/web/schedule?week=${currentWeek}`;
+}
+
+function generateCalendar() {
+    const firstDay = new Date(currentYear, currentMonth, 1);
+    const lastDay = new Date(currentYear, currentMonth + 1, 0);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay());
+    
+    const calendarGrid = document.getElementById('calendarGrid');
+    const calendarTitle = document.getElementById('calendarTitle');
+    
+    // Update title
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+    calendarTitle.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+    
+    // Clear existing calendar
+    calendarGrid.innerHTML = '';
+    
+    // Generate 6 weeks of calendar
+    for (let week = 0; week < 6; week++) {
+        const row = document.createElement('div');
+        row.className = 'row g-1 mb-1';
+        
+        for (let day = 0; day < 7; day++) {
+            const date = new Date(startDate);
+            date.setDate(startDate.getDate() + (week * 7) + day);
+            
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'col';
+            
+            const dayContent = document.createElement('div');
+            dayContent.className = 'calendar-day';
+            if (date.getMonth() !== currentMonth) {
+                dayContent.classList.add('text-muted');
+            }
+            
+            // Add games if any
+            const hasGames = checkForGames(date);
+            if (hasGames) {
+                dayContent.classList.add('has-games');
+            }
+            
+            dayContent.innerHTML = `
+                <div class="calendar-date">${date.getDate()}</div>
+                <div class="calendar-games">${hasGames ? '• Games' : ''}</div>
+            `;
+            
+            dayContent.onclick = () => viewDayGames(date);
+            
+            dayDiv.appendChild(dayContent);
+            row.appendChild(dayDiv);
+        }
+        
+        calendarGrid.appendChild(row);
+    }
+}
+
+function checkForGames(date) {
+    // In a real implementation, this would check against loaded game data
+    // For now, return random games for demonstration
+    const dayOfWeek = date.getDay();
+    return dayOfWeek === 0 || dayOfWeek === 1 || dayOfWeek === 4; // Sunday, Monday, Thursday
+}
+
+function previousMonth() {
+    currentMonth--;
+    if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+    }
+    generateCalendar();
+}
+
+function nextMonth() {
+    currentMonth++;
+    if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+    }
+    generateCalendar();
+}
+
+function viewDayGames(date) {
+    const dateStr = date.toISOString().split('T')[0];
+    window.location.href = `/web/games?date=${dateStr}`;
+}
+
+function viewGameDetail(gameId) {
+    window.location.href = `/web/game/${gameId}`;
+}
+
+function loadMoreGames() {
+    // Implementation for loading more games
+    console.log('Loading more games...');
+}
+
+function showLoading(show) {
+    const listView = document.getElementById('listView');
+    const loadingState = document.getElementById('loadingState');
+    
+    if (show) {
+        listView.classList.add('d-none');
+        loadingState.classList.remove('d-none');
+    } else {
+        listView.classList.remove('d-none');
+        loadingState.classList.add('d-none');
+    }
+}
+
+function showError(message) {
+    console.error(message);
+    // Could show toast notification or error state
+}
+</script>
+{% endblock %}

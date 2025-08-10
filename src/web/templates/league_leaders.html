@@ -221,11 +221,14 @@
                         <th width="50">Rank</th>
                         <th>Player</th>
                         <th>Team</th>
+                        <th>Att</th>
                         <th>Comp %</th>
                         <th>Yards</th>
+                        <th>Y/A</th>
                         <th>TDs</th>
                         <th>INTs</th>
                         <th>Rating</th>
+                        <th>QBR</th>
                         <th>EPA/Play</th>
                     </tr>
                 </thead>
@@ -235,11 +238,14 @@
                         <td class="table-rank rank-{{ loop.index }}">{{ loop.index }}</td>
                         <td class="player-name">{{ qb.player_name }}</td>
                         <td><span class="team-abbr">{{ qb.team }}</span></td>
+                        <td>{{ qb.attempts }}</td>
                         <td>{{ qb.completion_pct }}%</td>
                         <td>{{ "{:,}".format(qb.passing_yards) }}</td>
+                        <td>{{ qb.yards_per_attempt }}</td>
                         <td class="stat-value">{{ qb.passing_tds }}</td>
                         <td>{{ qb.interceptions }}</td>
                         <td class="stat-highlight">{{ qb.passer_rating }}</td>
+                        <td class="stat-value">{{ qb.qbr }}</td>
                         <td class="{% if qb.avg_epa > 0 %}epa-positive{% else %}epa-negative{% endif %}">
                             {{ qb.avg_epa }}
                         </td>
@@ -267,11 +273,13 @@
                         <th width="50">Rank</th>
                         <th>Player</th>
                         <th>Team</th>
-                        <th>Carries</th>
-                        <th>Yards</th>
+                        <th>Rush Yds</th>
                         <th>YPC</th>
-                        <th>TDs</th>
-                        <th>Long</th>
+                        <th>Rush TDs</th>
+                        <th>Rec</th>
+                        <th>Rec Yds</th>
+                        <th>Total Yds</th>
+                        <th>Total TDs</th>
                         <th>EPA/Play</th>
                     </tr>
                 </thead>
@@ -281,13 +289,15 @@
                         <td class="table-rank rank-{{ loop.index }}">{{ loop.index }}</td>
                         <td class="player-name">{{ rb.player_name }}</td>
                         <td><span class="team-abbr">{{ rb.team }}</span></td>
-                        <td>{{ rb.carries }}</td>
-                        <td class="stat-highlight">{{ "{:,}".format(rb.rushing_yards) }}</td>
+                        <td>{{ "{:,}".format(rb.rushing_yards) }}</td>
                         <td class="stat-value">{{ rb.yards_per_carry }}</td>
                         <td>{{ rb.rushing_tds }}</td>
-                        <td>{{ rb.longest_run }}</td>
-                        <td class="{% if rb.avg_epa > 0 %}epa-positive{% else %}epa-negative{% endif %}">
-                            {{ rb.avg_epa }}
+                        <td>{{ rb.receptions }}</td>
+                        <td>{{ "{:,}".format(rb.receiving_yards) }}</td>
+                        <td class="stat-highlight">{{ "{:,}".format(rb.total_yards) }}</td>
+                        <td class="stat-value">{{ rb.total_touchdowns }}</td>
+                        <td class="{% if rb.avg_epa_rushing > 0 %}epa-positive{% else %}epa-negative{% endif %}">
+                            {{ rb.avg_epa_rushing }}
                         </td>
                     </tr>
                     {% endfor %}
@@ -312,11 +322,13 @@
                         <th width="50">Rank</th>
                         <th>Player</th>
                         <th>Team</th>
+                        <th>Tgts</th>
                         <th>Rec</th>
                         <th>Yards</th>
                         <th>Y/R</th>
                         <th>TDs</th>
                         <th>Catch %</th>
+                        <th>Y/Tgt</th>
                         <th>EPA/Play</th>
                     </tr>
                 </thead>
@@ -326,11 +338,13 @@
                         <td class="table-rank rank-{{ loop.index }}">{{ loop.index }}</td>
                         <td class="player-name">{{ wr.player_name }}</td>
                         <td><span class="team-abbr">{{ wr.team }}</span></td>
+                        <td>{{ wr.targets }}</td>
                         <td>{{ wr.receptions }}</td>
                         <td class="stat-highlight">{{ "{:,}".format(wr.receiving_yards) }}</td>
-                        <td class="stat-value">{{ wr.yards_per_reception }}</td>
+                        <td class="stat-value">{{ wr.yards_per_catch }}</td>
                         <td>{{ wr.receiving_tds }}</td>
                         <td>{{ wr.catch_rate }}%</td>
+                        <td class="stat-value">{{ wr.yards_per_target }}</td>
                         <td class="{% if wr.avg_epa > 0 %}epa-positive{% else %}epa-negative{% endif %}">
                             {{ wr.avg_epa }}
                         </td>

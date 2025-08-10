@@ -38,6 +38,15 @@ class PlayerModel(SQLBaseModel):
     years_exp = Column(Integer)
     college = Column(String(100))
     
+    # Draft information
+    draft_year = Column(Integer)
+    draft_round = Column(Integer)
+    draft_pick = Column(Integer)
+    draft_team = Column(String(3))
+    
+    # Media
+    headshot_url = Column(String(500))
+    
     # Status
     status = Column(String(20), default='active')  # 'active', 'injured', 'retired'
     
@@ -104,6 +113,11 @@ class PlayerCreate(PlayerBase):
     rookie_year: Optional[int] = Field(None, ge=1920, le=2030, description="Rookie year")
     years_exp: Optional[int] = Field(None, ge=0, le=30, description="Years of experience")
     college: Optional[str] = Field(None, max_length=100, description="College")
+    draft_year: Optional[int] = Field(None, ge=1920, le=2030, description="Draft year")
+    draft_round: Optional[int] = Field(None, ge=1, le=10, description="Draft round")
+    draft_pick: Optional[int] = Field(None, ge=1, le=300, description="Draft pick number")
+    draft_team: Optional[str] = Field(None, min_length=2, max_length=3, description="Team that drafted player")
+    headshot_url: Optional[str] = Field(None, max_length=500, description="Player headshot URL")
     status: Optional[str] = Field('active', max_length=20, description="Player status")
     
     @field_validator('status')

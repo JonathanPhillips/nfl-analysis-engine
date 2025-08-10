@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block title %}Game Insights: {{ game.away_team }} @ {{ game.home_team }} - NFL Analysis Engine{% endblock %}
+
+{% block content %}
+<!-- Game Header -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-2 text-center">
+                        <h4>{{ game.away_team }}</h4>
+                        {% if game.away_score is not none %}
+                            <h2 class="mb-0">{{ game.away_score }}</h2>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-8 text-center">
+                        <h3 class="mb-1">
+                            <i class="fas fa-chart-line me-2"></i>Game Insights & Analytics
+                        </h3>
+                        <p class="mb-1">{{ game.game_date.strftime('%B %d, %Y') }}</p>
+                        {% if game.week %}
+                            <span class="badge bg-warning text-dark">Week {{ game.week }}</span>
+                        {% endif %}
+                        <span class="badge bg-success">{{ game.season_type }}</span>
+                    </div>
+                    <div class="col-md-2 text-center">
+                        <h4>{{ game.home_team }}</h4>
+                        {% if game.home_score is not none %}
+                            <h2 class="mb-0">{{ game.home_score }}</h2>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if error %}
+<!-- Error Message -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-warning" role="alert">
+            <h4 class="alert-heading">
+                <i class="fas fa-exclamation-triangle me-2"></i>Limited Data Available
+            </h4>
+            <p class="mb-0">{{ error }}</p>
+            <hr>
+            <p class="mb-0">
+                <small>Advanced insights require play-by-play data. This game may not have detailed play data available, 
+                or the insights engine may need play-by-play data to generate comprehensive analytics.</small>
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Basic Game Stats (always show these) -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Basic Game Statistics
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    {% if game.home_score is not none and game.away_score is not none %}
+                        <div class="col-md-3">
+                            <h4 class="text-primary">{{ game.home_score + game.away_score }}</h4>
+                            <small class="text-muted">Total Points</small>
+                        </div>
+                        <div class="col-md-3">
+                            <h4 class="text-info">{{ (game.home_score - game.away_score)|abs }}</h4>
+                            <small class="text-muted">Point Differential</small>
+                        </div>
+                        <div class="col-md-3">
+                            <h4 class="text-success">
+                                {% if game.home_score > game.away_score %}
+                                    {{ game.home_team }}
+                                {% else %}
+                                    {{ game.away_team }}
+                                {% endif %}
+                            </h4>
+                            <small class="text-muted">Winner</small>
+                        </div>
+                        <div class="col-md-3">
+                            <h4 class="{% if game.home_score + game.away_score > 50 %}text-warning{% else %}text-secondary{% endif %}">
+                                {% if game.home_score + game.away_score > 50 %}High{% else %}Normal{% endif %}
+                            </h4>
+                            <small class="text-muted">Scoring Game</small>
+                        </div>
+                    {% else %}
+                        <div class="col-12">
+                            <h4 class="text-muted">Game Not Yet Played</h4>
+                            <p class="text-muted">Insights will be available after game completion</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Game Conditions -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cloud-sun me-2"></i>Playing Conditions
+                </h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th width="40%">Surface:</th>
+                        <td>{{ game.surface|title or 'N/A' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Roof:</th>
+                        <td>{{ game.roof|title or 'N/A' }}</td>
+                    </tr>
+                    {% if game.temp %}
+                    <tr>
+                        <th>Temperature:</th>
+                        <td>{{ game.temp }}°F</td>
+                    </tr>
+                    {% endif %}
+                    {% if game.wind %}
+                    <tr>
+                        <th>Wind:</th>
+                        <td>{{ game.wind }} mph</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Game Context
+                </h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th width="40%">Season:</th>
+                        <td>{{ game.season }}</td>
+                    </tr>
+                    <tr>
+                        <th>Week:</th>
+                        <td>{{ game.week or 'N/A' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Type:</th>
+                        <td>
+                            {% if game.season_type == 'REG' %}Regular Season
+                            {% elif game.season_type == 'POST' %}Playoffs
+                            {% elif game.season_type == 'PRE' %}Preseason
+                            {% else %}{{ game.season_type }}{% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- Full Insights (when available) -->
+{% if insights %}
+<!-- Team Efficiency Metrics -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-tachometer-alt me-2"></i>Team Efficiency Metrics
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if insights.team_metrics %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary">{{ game.home_team }} (Home)</h6>
+                            <ul class="list-unstyled">
+                                {% for key, value in insights.team_metrics.home_team.items() %}
+                                <li><strong>{{ key|replace('_', ' ')|title }}:</strong> {{ value }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-info">{{ game.away_team }} (Away)</h6>
+                            <ul class="list-unstyled">
+                                {% for key, value in insights.team_metrics.away_team.items() %}
+                                <li><strong>{{ key|replace('_', ' ')|title }}:</strong> {{ value }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Team efficiency metrics not available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Advanced Metrics -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>EPA (Expected Points Added)
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if insights.epa_metrics %}
+                    <div class="text-center mb-3">
+                        <h4 class="text-success">{{ insights.epa_metrics.total_epa|round(2) }}</h4>
+                        <small class="text-muted">Total EPA Differential</small>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h6 class="text-primary">{{ game.home_team }}</h6>
+                            <p>{{ insights.epa_metrics.home_epa|round(2) }}</p>
+                        </div>
+                        <div class="col-6">
+                            <h6 class="text-info">{{ game.away_team }}</h6>
+                            <p>{{ insights.epa_metrics.away_epa|round(2) }}</p>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-muted">EPA metrics require play-by-play data</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-percentage me-2"></i>Win Probability
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if insights.win_prob_metrics %}
+                    <div class="text-center mb-3">
+                        <h4 class="text-warning">{{ (insights.win_prob_metrics.final_win_prob * 100)|round(1) }}%</h4>
+                        <small class="text-muted">Final Win Probability</small>
+                    </div>
+                    <div class="progress mb-2">
+                        <div class="progress-bar bg-primary" style="width: {{ (insights.win_prob_metrics.home_win_prob * 100)|round(1) }}%"></div>
+                        <div class="progress-bar bg-info" style="width: {{ (insights.win_prob_metrics.away_win_prob * 100)|round(1) }}%"></div>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <small class="text-primary">{{ game.home_team }}: {{ (insights.win_prob_metrics.home_win_prob * 100)|round(1) }}%</small>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-info">{{ game.away_team }}: {{ (insights.win_prob_metrics.away_win_prob * 100)|round(1) }}%</small>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Win probability metrics require play-by-play data</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Key Plays -->
+{% if insights.key_plays %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-star me-2"></i>Key Plays & Moments
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for play in insights.key_plays %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-left-primary">
+                            <div class="card-body">
+                                <h6 class="text-primary">{{ play.play_type|title }}</h6>
+                                <p class="mb-1"><strong>Quarter {{ play.quarter }}, {{ play.time_remaining }}</strong></p>
+                                <p class="mb-1">{{ play.description }}</p>
+                                <small class="text-muted">EPA: {{ play.epa|round(2) }} | WP Change: {{ (play.wp_change * 100)|round(1) }}%</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="alert alert-info" role="alert">
+    <h4 class="alert-heading">
+        <i class="fas fa-info-circle me-2"></i>Insights Processing
+    </h4>
+    <p class="mb-0">Game insights are being processed. Advanced analytics will be available shortly.</p>
+</div>
+{% endif %}
+{% endif %}
+
+<!-- Action Buttons -->
+<div class="row mb-4">
+    <div class="col-12 text-center">
+        <a href="/web/game/{{ game.game_id }}" class="btn btn-primary me-3">
+            <i class="fas fa-arrow-left me-2"></i>Back to Game Details
+        </a>
+        <a href="/web/games" class="btn btn-outline-primary me-3">
+            <i class="fas fa-calendar-alt me-2"></i>All Games
+        </a>
+        <a href="/web/insights" class="btn btn-info">
+            <i class="fas fa-chart-line me-2"></i>League Insights
+        </a>
+    </div>
+</div>
+{% endblock %}

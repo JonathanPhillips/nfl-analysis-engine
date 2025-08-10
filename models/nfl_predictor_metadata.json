@@ -1,0 +1,20 @@
+{
+  "trained_at": "2025-08-08T14:34:54.914308",
+  "feature_count": 43,
+  "training_metrics": {
+    "accuracy": 0.9832460732984293,
+    "precision": 0.9793233082706767,
+    "recall": 0.9904942965779467,
+    "f1_score": 0.9848771266540642,
+    "roc_auc": 0.9990117613691758,
+    "samples": 955
+  },
+  "validation_metrics": {
+    "accuracy": 0.6694560669456067,
+    "precision": 0.6827586206896552,
+    "recall": 0.75,
+    "f1_score": 0.7148014440433214,
+    "roc_auc": 0.7072359105069386,
+    "samples": 239
+  }
+}

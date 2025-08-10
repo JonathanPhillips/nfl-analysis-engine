@@ -240,18 +240,24 @@ class ExpectedPointsModel:
     
     def calculate_expected_points(self, context: PlayContext) -> float:
         """Calculate expected points for a given play context."""
-        key = (context.down, context.yardline_100)
+        # Handle None values with defaults
+        down = context.down if context.down is not None else 1
+        yardline = context.yardline_100 if context.yardline_100 is not None else 50
+        game_seconds = context.game_seconds_remaining if context.game_seconds_remaining is not None else 1800
+        score_diff = context.score_differential if context.score_differential is not None else 0
+        
+        key = (down, yardline)
         base_ep = self.ep_matrix.get(key, 0.0)
         
         # Adjustments based on other context
         time_adjustment = 1.0
-        if context.game_seconds_remaining < 120:  # Last 2 minutes
+        if game_seconds < 120:  # Last 2 minutes
             time_adjustment = 1.15  # More urgent
-        elif context.game_seconds_remaining > 3000:  # Early game
+        elif game_seconds > 3000:  # Early game
             time_adjustment = 0.95
         
         # Score differential adjustment
-        if abs(context.score_differential) > 14:  # Blowout
+        if abs(score_diff) > 14:  # Blowout
             time_adjustment *= 0.8
         
         return base_ep * time_adjustment
@@ -269,22 +275,26 @@ class WinProbabilityModel:
         # Simplified win probability model
         # In production, this would be a trained model on historical data
         
+        # Handle None values with defaults
+        score_diff = context.score_differential if context.score_differential is not None else 0
+        game_seconds = context.game_seconds_remaining if context.game_seconds_remaining is not None else 1800
+        yardline = context.yardline_100 if context.yardline_100 is not None else 50
+        
         # Base win probability from score differential
-        score_diff = context.score_differential
         base_wp = 0.5 + (score_diff * 0.02)  # Roughly 2% per point
         
         # Time remaining adjustment
-        if context.game_seconds_remaining > 1800:  # More than 30 minutes
+        if game_seconds > 1800:  # More than 30 minutes
             time_factor = 0.8  # Score matters less early
-        elif context.game_seconds_remaining > 900:  # More than 15 minutes
+        elif game_seconds > 900:  # More than 15 minutes
             time_factor = 1.0
-        elif context.game_seconds_remaining > 120:  # More than 2 minutes
+        elif game_seconds > 120:  # More than 2 minutes
             time_factor = 1.3  # Score matters more late
         else:  # Less than 2 minutes
             time_factor = 2.0  # Score matters a lot
         
         # Field position adjustment
-        field_pos_bonus = (100 - context.yardline_100) * 0.002
+        field_pos_bonus = (100 - yardline) * 0.002
         
         # Down and distance adjustment
         conversion_prob = self._estimate_conversion_probability(context)
@@ -297,14 +307,17 @@ class WinProbabilityModel:
     
     def _estimate_conversion_probability(self, context: PlayContext) -> float:
         """Estimate probability of converting current down."""
-        if context.down == 1:
-            return 0.75 - (context.ydstogo * 0.02)
-        elif context.down == 2:
-            return 0.65 - (context.ydstogo * 0.03)
-        elif context.down == 3:
-            return 0.45 - (context.ydstogo * 0.04)
+        down = context.down if context.down is not None else 1
+        ydstogo = context.ydstogo if context.ydstogo is not None else 10
+        
+        if down == 1:
+            return 0.75 - (ydstogo * 0.02)
+        elif down == 2:
+            return 0.65 - (ydstogo * 0.03)
+        elif down == 3:
+            return 0.45 - (ydstogo * 0.04)
         else:  # 4th down
-            return 0.25 - (context.ydstogo * 0.05)
+            return 0.25 - (ydstogo * 0.05)
 
 
 class InsightsGenerator:
@@ -449,7 +462,7 @@ class InsightsGenerator:
                     'ydstogo': play.ydstogo,
                     'yardline_100': play.yardline_100,
                     'qtr': play.qtr,
-                    'game_seconds_remaining': 3600 - ((play.qtr - 1) * 900),  # Approximate
+                    'game_seconds_remaining': 3600 - (((play.qtr or 1) - 1) * 900),  # Approximate
                     'score_differential': 0,  # Would need game state
                     'timeouts_remaining': 3,
                     'play_type': play.play_type,
@@ -500,14 +513,14 @@ class InsightsGenerator:
             def_metrics = []
             for play in def_plays:
                 play_data = {
-                    'down': play.down,
-                    'ydstogo': play.ydstogo,
-                    'yardline_100': play.yardline_100,
-                    'qtr': play.qtr,
-                    'game_seconds_remaining': 3600 - ((play.qtr - 1) * 900),
-                    'score_differential': 0,
+                    'down': play.down or 1,
+                    'ydstogo': play.ydstogo or 10,
+                    'yardline_100': play.yardline_100 or 50,
+                    'qtr': play.qtr or 1,
+                    'game_seconds_remaining': 3600 - (((play.qtr or 1) - 1) * 900),
+                    'score_differential': play.score_differential or 0,
                     'timeouts_remaining': 3,
-                    'play_type': play.play_type,
+                    'play_type': play.play_type or 'pass',
                     'yards_gained': play.yards_gained or 0,
                     'touchdown': play.touchdown or False,
                     'interception': False,
@@ -558,6 +571,100 @@ class InsightsGenerator:
             self.logger.error(f"Error generating team insights for {team_abbr}: {e}")
             return None
     
+    def _generate_basic_game_insight(self, game: GameModel) -> GameInsight:
+        """Generate basic game insight when play-by-play data is not available.
+        
+        Args:
+            game: Game model instance
+            
+        Returns:
+            Basic GameInsight with available game information
+        """
+        from datetime import datetime
+        
+        # Calculate basic stats from game info
+        total_points = (game.home_score or 0) + (game.away_score or 0) if game.home_score is not None else 0
+        point_diff = abs((game.home_score or 0) - (game.away_score or 0)) if game.home_score is not None else 0
+        
+        # Determine game characteristics
+        is_high_scoring = total_points > 50 if game.home_score is not None else False
+        is_close_game = point_diff <= 7 if game.home_score is not None else False
+        
+        # Basic team performance (without plays)
+        home_team_metrics = TeamInsights(
+            team_abbr=game.home_team,
+            epa_per_play=0.0,  # Not available without plays
+            success_rate=0.0,  # Not available without plays  
+            explosive_play_rate=0.0,  # Not available without plays
+            three_and_out_rate=0.0,  # Not available without plays
+            red_zone_efficiency=0.0,  # Not available without plays
+            turnover_rate=0.0,  # Not available without plays
+            time_of_possession=0.0,  # Not available without plays
+            avg_drive_length=0.0,  # Not available without plays
+            points_per_drive=0.0,  # Not available without plays
+            defensive_stops=0,  # Not available without plays
+            pressure_rate=0.0  # Not available without plays
+        )
+        
+        away_team_metrics = TeamInsights(
+            team_abbr=game.away_team,
+            epa_per_play=0.0,
+            success_rate=0.0,
+            explosive_play_rate=0.0,
+            three_and_out_rate=0.0,
+            red_zone_efficiency=0.0,
+            turnover_rate=0.0,
+            time_of_possession=0.0,
+            avg_drive_length=0.0,
+            points_per_drive=0.0,
+            defensive_stops=0,
+            pressure_rate=0.0
+        )
+        
+        # Create basic game insight
+        basic_insight = GameInsight(
+            game_id=game.game_id,
+            game_date=game.game_date or datetime.now().date(),
+            home_team=game.home_team,
+            away_team=game.away_team,
+            home_score=game.home_score or 0,
+            away_score=game.away_score or 0,
+            home_team_insights=home_team_metrics,
+            away_team_insights=away_team_metrics,
+            key_plays=[],  # No plays available
+            game_flow_analysis={
+                "total_points": total_points,
+                "point_differential": point_diff,
+                "is_high_scoring": is_high_scoring,
+                "is_close_game": is_close_game,
+                "game_conditions": {
+                    "surface": game.surface,
+                    "roof": game.roof,
+                    "temperature": game.temp,
+                    "wind": game.wind
+                }
+            },
+            momentum_shifts=[],  # Not available without plays
+            clutch_performance={},  # Not available without plays
+            efficiency_ratings={
+                "note": "Advanced efficiency ratings require play-by-play data"
+            },
+            situational_analysis={
+                "note": "Situational analysis requires play-by-play data"
+            },
+            coaching_decisions=[],  # Not available without plays
+            injury_impact=[],  # Not available in basic game data
+            weather_impact="neutral",  # Basic assessment
+            home_field_advantage=3.0 if game.home_score and game.away_score and game.home_score > game.away_score else 0.0,
+            prediction_accuracy=0.0,  # Not available without predictions
+            betting_analysis={},  # Would need betting lines
+            comparison_to_average={
+                "note": "Comparisons require historical play data"
+            }
+        )
+        
+        return basic_insight
+
     def generate_game_insights(self, game_id: str) -> Optional[GameInsight]:
         """Generate insights for a specific game.
         
@@ -584,7 +691,8 @@ class InsightsGenerator:
             
             if not plays:
                 self.logger.warning(f"No plays found for game {game_id}")
-                return None
+                # Return basic game insight without play-by-play data
+                return self._generate_basic_game_insight(game)
             
             # Calculate metrics for all plays
             home_epa = 0
@@ -596,14 +704,14 @@ class InsightsGenerator:
             
             for play in plays:
                 play_data = {
-                    'down': play.down,
-                    'ydstogo': play.ydstogo,
-                    'yardline_100': play.yardline_100,
-                    'qtr': play.qtr,
-                    'game_seconds_remaining': 3600 - ((play.qtr - 1) * 900),
-                    'score_differential': 0,
+                    'down': play.down or 1,
+                    'ydstogo': play.ydstogo or 10,
+                    'yardline_100': play.yardline_100 or 50,
+                    'qtr': play.qtr or 1,
+                    'game_seconds_remaining': 3600 - (((play.qtr or 1) - 1) * 900),
+                    'score_differential': play.score_differential or 0,
                     'timeouts_remaining': 3,
-                    'play_type': play.play_type,
+                    'play_type': play.play_type or 'pass',
                     'yards_gained': play.yards_gained or 0,
                     'touchdown': play.touchdown or False,
                     'interception': False,

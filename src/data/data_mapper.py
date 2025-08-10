@@ -99,36 +99,77 @@ class DataMapper:
         
         for _, row in players_df.iterrows():
             try:
-                player_id = str(row.get('player_id', '')).strip()
+                # Use gsis_id as player_id (primary identifier)
+                player_id = str(row.get('gsis_id', '')).strip()
                 if not player_id:
+                    continue
+                
+                # Get display_name as full_name
+                full_name = str(row.get('display_name', '')).strip()
+                if not full_name:
                     continue
                 
                 player_data = {
                     'player_id': player_id,
-                    'full_name': str(row.get('full_name', '')).strip()
+                    'full_name': full_name
                 }
                 
                 # Optional fields with validation
                 if 'gsis_id' in row and pd.notna(row['gsis_id']):
                     player_data['gsis_id'] = str(row['gsis_id']).strip()
                 
-                if 'team' in row and pd.notna(row['team']):
-                    team_abbr = str(row['team']).strip().upper()
-                    if team_abbr and team_abbr != 'UNK':
-                        player_data['team_abbr'] = team_abbr
+                # Improved team mapping with priority order
+                # Priority: roster team > merged team > fallback teams  
+                team_abbr = None
+                for team_col in ['team', 'team_roster', 'latest_team', 'team_player']:
+                    if team_col in row and pd.notna(row[team_col]):
+                        team_abbr = str(row[team_col]).strip().upper()
+                        break
                 
-                if 'position' in row and pd.notna(row['position']):
-                    position = str(row['position']).strip().upper()
-                    if position:
-                        player_data['position'] = position
+                # Map old team abbreviations to current ones
+                team_mapping = {
+                    'LA': 'LAR',   # Los Angeles Rams
+                    'OAK': 'LV',   # Oakland Raiders -> Las Vegas Raiders  
+                    'SD': 'LAC',   # San Diego Chargers -> Los Angeles Chargers
+                    'STL': 'LAR'   # St. Louis Rams -> Los Angeles Rams
+                }
                 
-                if 'jersey_number' in row and pd.notna(row['jersey_number']):
-                    try:
-                        jersey = int(row['jersey_number'])
-                        if 0 <= jersey <= 99:
-                            player_data['jersey_number'] = jersey
-                    except (ValueError, TypeError):
-                        pass
+                if team_abbr and team_abbr != 'UNK' and team_abbr != 'NA':
+                    # Apply team mapping
+                    if team_abbr in team_mapping:
+                        team_abbr = team_mapping[team_abbr]
+                    player_data['team_abbr'] = team_abbr
+                
+                # Improved position mapping with priority order
+                # Priority: roster position > merged position > fallback positions
+                position = None
+                
+                # Try primary position sources first
+                for pos_col in ['position', 'position_roster']:
+                    if pos_col in row and pd.notna(row[pos_col]):
+                        position = str(row[pos_col]).strip().upper()
+                        break
+                
+                # Fallback to other position columns if needed
+                if not position:
+                    for pos_col in ['position_player', 'position_x', 'position_y', 'ngs_position']:
+                        if pos_col in row and pd.notna(row[pos_col]):
+                            position = str(row[pos_col]).strip().upper()
+                            break
+                
+                if position and position not in ['NA', 'NULL', '']:
+                    player_data['position'] = position
+                
+                # Improved jersey number mapping with priority order
+                for jersey_col in ['jersey_number', 'jersey_number_roster', 'jersey_number_player', 'jersey_number_x', 'jersey_number_y']:
+                    if jersey_col in row and pd.notna(row[jersey_col]):
+                        try:
+                            jersey = int(row[jersey_col])
+                            if 0 <= jersey <= 99:
+                                player_data['jersey_number'] = jersey
+                                break
+                        except (ValueError, TypeError):
+                            continue
                 
                 # Height handling
                 if 'height' in row and pd.notna(row['height']):
@@ -155,14 +196,69 @@ class DataMapper:
                     except (ValueError, TypeError):
                         pass
                 
-                # Rookie year
-                if 'rookie_year' in row and pd.notna(row['rookie_year']):
+                # Rookie year - try different column names
+                for rookie_col in ['rookie_season', 'rookie_year']:
+                    if rookie_col in row and pd.notna(row[rookie_col]):
+                        try:
+                            rookie_year = int(row[rookie_col])
+                            if 1920 <= rookie_year <= datetime.now().year:
+                                player_data['rookie_year'] = rookie_year
+                                break
+                        except (ValueError, TypeError):
+                            continue
+                
+                # Draft information
+                if 'draft_year' in row and pd.notna(row['draft_year']):
                     try:
-                        rookie_year = int(row['rookie_year'])
-                        if 1920 <= rookie_year <= datetime.now().year:
-                            player_data['rookie_year'] = rookie_year
+                        draft_year = int(row['draft_year'])
+                        if 1920 <= draft_year <= datetime.now().year:
+                            player_data['draft_year'] = draft_year
                     except (ValueError, TypeError):
                         pass
+                
+                if 'draft_round' in row and pd.notna(row['draft_round']):
+                    try:
+                        draft_round = int(row['draft_round'])
+                        if 1 <= draft_round <= 10:
+                            player_data['draft_round'] = draft_round
+                    except (ValueError, TypeError):
+                        pass
+                
+                if 'draft_pick' in row and pd.notna(row['draft_pick']):
+                    try:
+                        draft_pick = int(row['draft_pick'])
+                        if 1 <= draft_pick <= 300:
+                            player_data['draft_pick'] = draft_pick
+                    except (ValueError, TypeError):
+                        pass
+                
+                if 'draft_team' in row and pd.notna(row['draft_team']):
+                    draft_team = str(row['draft_team']).strip().upper()
+                    if draft_team and len(draft_team) <= 3:
+                        player_data['draft_team'] = draft_team
+                
+                # Headshot URL
+                if 'headshot' in row and pd.notna(row['headshot']):
+                    headshot = str(row['headshot']).strip()
+                    if headshot and headshot.startswith('http'):
+                        player_data['headshot_url'] = headshot
+                
+                # College - try different column names
+                for college_col in ['college_name', 'college']:
+                    if college_col in row and pd.notna(row[college_col]):
+                        player_data['college'] = str(row[college_col]).strip()
+                        break
+                
+                # Years of experience - try different column names
+                for years_col in ['years_of_experience', 'years_exp']:
+                    if years_col in row and pd.notna(row[years_col]):
+                        try:
+                            years_exp = int(row[years_col])
+                            if 0 <= years_exp <= 30:
+                                player_data['years_exp'] = years_exp
+                                break
+                        except (ValueError, TypeError):
+                            continue
                 
                 # Status
                 if 'status' in row and pd.notna(row['status']):
@@ -208,7 +304,8 @@ class DataMapper:
             try:
                 game_id = str(row.get('game_id', '')).strip()
                 season = row.get('season')
-                season_type = str(row.get('season_type', '')).strip().upper()
+                # Column is 'game_type' not 'season_type' in nfl_data_py
+                season_type = str(row.get('game_type', '')).strip().upper()
                 game_date = row.get('gameday')
                 home_team = str(row.get('home_team', '')).strip().upper()
                 away_team = str(row.get('away_team', '')).strip().upper()

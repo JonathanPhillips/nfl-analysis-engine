@@ -9,6 +9,7 @@ import logging
 from ...data.data_loader import DataLoader
 from ...data.pipeline import DataValidationPipeline, PipelineConfig
 from ..dependencies import get_db_session
+from ..auth import authenticated
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +69,7 @@ async def get_data_status(
 @router.post("/load/teams")
 async def load_teams_data(
     background_tasks: BackgroundTasks,
-    force_refresh: bool = False,
+    authenticated: bool = Depends(authenticated),
     db: Session = Depends(get_db_session)
 ):
     """Load teams data from nfl_data_py."""
@@ -76,16 +77,16 @@ async def load_teams_data(
         loader = get_data_loader()
         
         # Load teams data
-        result = loader.load_teams(force_refresh=force_refresh)
+        result = loader.load_teams()
         
         return {
             "status": "success",
-            "message": f"Loaded {result.records_loaded} teams",
+            "message": f"Loaded {result.records_inserted} teams",
             "result": {
-                "records_loaded": result.records_loaded,
+                "records_loaded": result.records_inserted,
                 "records_updated": result.records_updated,
                 "records_skipped": result.records_skipped,
-                "duration_seconds": result.duration.total_seconds(),
+                "duration_seconds": result.duration if result.duration else 0,
                 "errors": result.errors
             }
         }
@@ -99,7 +100,6 @@ async def load_teams_data(
 async def load_players_data(
     background_tasks: BackgroundTasks,
     seasons: Optional[str] = None,
-    force_refresh: bool = False,
     db: Session = Depends(get_db_session)
 ):
     """Load players data from nfl_data_py for specified seasons."""
@@ -115,16 +115,16 @@ async def load_players_data(
                 raise HTTPException(status_code=400, detail="Invalid seasons format. Use comma-separated integers.")
         
         # Load players data
-        result = loader.load_players(seasons=season_list, force_refresh=force_refresh)
+        result = loader.load_players(seasons=season_list)
         
         return {
             "status": "success",
-            "message": f"Loaded {result.records_loaded} players",
+            "message": f"Loaded {result.records_inserted} players",
             "result": {
-                "records_loaded": result.records_loaded,
+                "records_loaded": result.records_inserted,
                 "records_updated": result.records_updated,
                 "records_skipped": result.records_skipped,
-                "duration_seconds": result.duration.total_seconds(),
+                "duration_seconds": result.duration if result.duration else 0,
                 "errors": result.errors
             }
         }
@@ -140,32 +140,33 @@ async def load_players_data(
 async def load_games_data(
     background_tasks: BackgroundTasks,
     seasons: Optional[str] = None,
-    force_refresh: bool = False,
     db: Session = Depends(get_db_session)
 ):
     """Load games data from nfl_data_py for specified seasons."""
     try:
         loader = get_data_loader()
         
-        # Parse seasons parameter
-        season_list = None
+        # Parse seasons parameter - default to 2023 and 2024
         if seasons:
             try:
                 season_list = [int(s.strip()) for s in seasons.split(',')]
             except ValueError:
                 raise HTTPException(status_code=400, detail="Invalid seasons format. Use comma-separated integers.")
+        else:
+            # Default to current and upcoming season
+            season_list = [2023, 2024]
         
         # Load games data
-        result = loader.load_games(seasons=season_list, force_refresh=force_refresh)
+        result = loader.load_games(seasons=season_list)
         
         return {
             "status": "success",
-            "message": f"Loaded {result.records_loaded} games",
+            "message": f"Loaded {result.records_inserted} games",
             "result": {
-                "records_loaded": result.records_loaded,
+                "records_loaded": result.records_inserted,
                 "records_updated": result.records_updated,
                 "records_skipped": result.records_skipped,
-                "duration_seconds": result.duration.total_seconds(),
+                "duration_seconds": result.duration if result.duration else 0,
                 "errors": result.errors
             }
         }
@@ -175,6 +176,57 @@ async def load_games_data(
     except Exception as e:
         logger.error(f"Error loading games data: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to load games data: {str(e)}")
+
+
+@router.post("/load/plays")
+async def load_plays_data(
+    background_tasks: BackgroundTasks,
+    seasons: Optional[str] = None,
+    weeks: Optional[str] = None,
+    db: Session = Depends(get_db_session)
+):
+    """Load play-by-play data from nfl_data_py for specified seasons and weeks."""
+    try:
+        loader = get_data_loader()
+        
+        # Parse seasons parameter - default to 2023 and 2024
+        if seasons:
+            try:
+                season_list = [int(s.strip()) for s in seasons.split(',')]
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid seasons format. Use comma-separated integers.")
+        else:
+            # Default to current seasons
+            season_list = [2023, 2024]
+        
+        # Parse weeks parameter if provided
+        week_list = None
+        if weeks:
+            try:
+                week_list = [int(w.strip()) for w in weeks.split(',')]
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid weeks format. Use comma-separated integers.")
+        
+        # Load plays data
+        result = loader.load_plays(seasons=season_list, weeks=week_list)
+        
+        return {
+            "status": "success",
+            "message": f"Loaded {result.records_inserted} plays for seasons {season_list}",
+            "result": {
+                "records_loaded": result.records_inserted,
+                "records_updated": result.records_updated,
+                "records_skipped": result.records_skipped,
+                "duration_seconds": result.duration if result.duration else 0,
+                "errors": result.errors
+            }
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error loading plays data: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to load plays data: {str(e)}")
 
 
 @router.post("/validate")
@@ -228,7 +280,7 @@ async def validate_data(
                 'team_abbr': r.team_abbr,
                 'team_name': r.team_name,
                 'team_nick': r.team_nick,
-                'team_conference': r.team_conference,
+                'team_conference': r.team_conf,
                 'team_division': r.team_division
             } for r in records]
         elif data_type == 'players':
@@ -316,3 +368,77 @@ async def clear_cache():
     except Exception as e:
         logger.error(f"Error clearing cache: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to clear cache")
+
+
+@router.post("/refresh")
+async def refresh_all_data(
+    background_tasks: BackgroundTasks,
+    current_season_only: bool = False,
+    db: Session = Depends(get_db_session)
+):
+    """Refresh all data (teams, games, recent plays) automatically."""
+    try:
+        from datetime import datetime
+        
+        loader = get_data_loader()
+        results = {}
+        
+        # Always refresh teams first
+        logger.info("Starting automated data refresh...")
+        results['teams'] = loader.load_teams()
+        
+        if current_season_only:
+            # Only refresh current season
+            current_year = datetime.now().year
+            seasons = [current_year]
+        else:
+            # Refresh recent seasons
+            current_year = datetime.now().year
+            seasons = [current_year, current_year - 1]
+        
+        # Refresh games
+        results['games'] = loader.load_games(seasons)
+        
+        # Refresh recent plays (current season, recent weeks)
+        current_week = min(18, max(1, datetime.now().timetuple().tm_yday // 7 - 35))  # Rough NFL week calculation
+        recent_weeks = [max(1, current_week - 2), max(1, current_week - 1), current_week]
+        
+        results['plays'] = loader.load_plays([current_year], recent_weeks[:2])  # Last 2 weeks
+        
+        # Calculate totals
+        total_teams = results['teams'].records_inserted + results['teams'].records_updated
+        total_games = results['games'].records_inserted + results['games'].records_updated  
+        total_plays = results['plays'].records_inserted + results['plays'].records_updated
+        
+        return {
+            "status": "success",
+            "message": f"Data refresh completed: {total_teams} teams, {total_games} games, {total_plays} plays",
+            "results": {
+                "teams": results['teams'].to_dict(),
+                "games": results['games'].to_dict(), 
+                "plays": results['plays'].to_dict()
+            },
+            "seasons_refreshed": seasons,
+            "refresh_time": datetime.now().isoformat()
+        }
+    
+    except Exception as e:
+        logger.error(f"Error during data refresh: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Data refresh failed: {str(e)}")
+
+
+@router.get("/refresh/schedule")
+async def get_refresh_schedule():
+    """Get the current data refresh schedule configuration."""
+    return {
+        "status": "success",
+        "schedule": {
+            "automatic_refresh": False,  # Would be configurable
+            "refresh_frequency": "daily",
+            "refresh_time": "06:00 UTC",
+            "current_season_only": True,
+            "enabled_data_types": ["teams", "games", "plays"]
+        },
+        "next_refresh": "Would be calculated based on schedule",
+        "last_refresh": "Would track last successful refresh"
+    }

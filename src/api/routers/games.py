@@ -68,14 +68,12 @@ async def get_games(
                     "away_team": game.away_team,
                     "home_score": game.home_score,
                     "away_score": game.away_score,
-                    "total": game.total,
-                    "overtime": game.overtime,
-                    "stadium": game.stadium,
-                    "weather_temp": game.weather_temp,
-                    "weather_humidity": game.weather_humidity,
-                    "weather_wind": game.weather_wind,
+                    "total_score": game.total_score,
                     "roof": game.roof,
-                    "surface": game.surface
+                    "surface": game.surface,
+                    "temp": game.temp,
+                    "wind": game.wind,
+                    "game_finished": game.game_finished
                 } for game in games
             ],
             "total": total,
@@ -114,20 +112,17 @@ async def get_game(
             "away_team": game.away_team,
             "home_score": game.home_score,
             "away_score": game.away_score,
-            "total": game.total,
-            "overtime": game.overtime,
-            "stadium": game.stadium,
-            "weather_temp": game.weather_temp,
-            "weather_humidity": game.weather_humidity,
-            "weather_wind": game.weather_wind,
+            "total_score": game.total_score,
+            "result": game.result,
             "roof": game.roof,
             "surface": game.surface,
-            "home_coach": game.home_coach,
-            "away_coach": game.away_coach,
-            "referee": game.referee,
-            "stadium_id": game.stadium_id,
-            "created_at": game.created_at,
-            "updated_at": game.updated_at
+            "temp": game.temp,
+            "wind": game.wind,
+            "game_finished": game.game_finished,
+            "home_spread": game.home_spread,
+            "total_line": game.total_line,
+            "created_at": game.created_at.isoformat() if game.created_at else None,
+            "updated_at": game.updated_at.isoformat() if game.updated_at else None
         }
     
     except HTTPException:

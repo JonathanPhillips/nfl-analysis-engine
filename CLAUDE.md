@@ -166,7 +166,7 @@ if result.success:
 **Key Files**:
 - `pytest.ini`: Test configuration with coverage settings
 - `alembic.ini`: Database migration configuration  
-- `docker-compose.yml`: Multi-service development environment
+- `docker-compose.yml`: Multi-service development environments
 - `requirements.txt`: All Python dependencies
 
 **Model Storage**: Trained models saved to `models/` directory with pickle serialization and JSON metadata.
@@ -174,3 +174,5 @@ if result.success:
 **Web Templates**: Located in `src/web/templates/` with shared base template using Bootstrap 5.
 
 The codebase follows strict TDD principles - always run tests after changes and maintain >90% coverage.
+
+**Browser Testing** Use Playwright MCP to do any testing where a browser is needed.s

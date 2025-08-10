@@ -11,6 +11,7 @@ import logging
 from ...analysis.models import NFLPredictor, Prediction
 from ...models.game import GameModel
 from ..dependencies import get_db_session
+from ..auth import authenticated
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +84,7 @@ class TrainingResponse(BaseModel):
 async def train_model(
     training_request: TrainingRequest,
     background_tasks: BackgroundTasks,
+    authenticated: bool = Depends(authenticated),
     predictor: NFLPredictor = Depends(get_predictor)
 ):
     """Train the NFL prediction model."""

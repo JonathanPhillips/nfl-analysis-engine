@@ -1,0 +1,540 @@
+{% extends "base.html" %}
+
+{% block title %}{{ player.full_name }} - Player Profile{% endblock %}
+
+{% block extra_css %}
+<style>
+    .player-header {
+        background: linear-gradient(135deg, var(--nfl-blue), #1e4a6b);
+        color: white;
+        padding: 3rem 0;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .player-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 30%;
+        height: 200%;
+        background: rgba(255, 255, 255, 0.05);
+        transform: rotate(15deg);
+    }
+    
+    .player-photo {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        border: 4px solid white;
+        object-fit: cover;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .player-avatar-large {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--nfl-red), #b8080a);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 2.5rem;
+        border: 4px solid white;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .position-badge-large {
+        background: var(--nfl-red);
+        color: white;
+        padding: 0.5rem 1.2rem;
+        border-radius: 25px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        display: inline-block;
+        margin: 0.5rem 0;
+    }
+    
+    .team-badge-large {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 0.4rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        display: inline-block;
+        margin-left: 0.5rem;
+    }
+    
+    .stat-box {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid var(--nfl-blue);
+        transition: transform 0.3s ease;
+    }
+    
+    .stat-box:hover {
+        transform: translateY(-2px);
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: var(--nfl-blue);
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .info-card .card-header {
+        background: linear-gradient(135deg, var(--nfl-blue), #1e4a6b);
+        color: white;
+        border-radius: 12px 12px 0 0 !important;
+        padding: 1rem 1.5rem;
+    }
+    
+    .career-timeline {
+        position: relative;
+        padding: 1rem 0;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-left: 3rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-left: 2px solid #e9ecef;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: 0;
+        width: 10px;
+        height: 10px;
+        background: var(--nfl-blue);
+        border-radius: 50%;
+    }
+    
+    .timeline-year {
+        font-weight: bold;
+        color: var(--nfl-blue);
+        font-size: 1.1rem;
+    }
+    
+    .timeline-event {
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .performance-chart {
+        height: 300px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+    }
+    
+    .comparison-section {
+        background: linear-gradient(135deg, #74b9ff, #0984e3);
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+    }
+    
+    .btn-action {
+        border-radius: 8px;
+        padding: 0.6rem 1.2rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .recent-games {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .game-item {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    
+    .game-item:hover {
+        background: #e9ecef;
+    }
+    
+    .game-result {
+        font-weight: bold;
+        padding: 0.2rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+    }
+    
+    .game-result.win {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .game-result.loss {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    @media (max-width: 768px) {
+        .player-photo, .player-avatar-large {
+            width: 80px;
+            height: 80px;
+        }
+        
+        .player-avatar-large {
+            font-size: 1.8rem;
+        }
+        
+        .stat-number {
+            font-size: 1.5rem;
+        }
+        
+        .action-buttons {
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Player Header -->
+<div class="player-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                {% if player.headshot_url %}
+                <img src="{{ player.headshot_url }}" alt="{{ player.full_name }}" class="player-photo">
+                {% else %}
+                <div class="player-avatar-large">
+                    {{ player.full_name.split()[0][0] }}{{ player.full_name.split()[-1][0] if player.full_name.split()|length > 1 else '' }}
+                </div>
+                {% endif %}
+            </div>
+            <div class="col">
+                <h1 class="mb-2">{{ player.full_name }}</h1>
+                <div class="mb-2">
+                    {% if player.position %}
+                    <span class="position-badge-large">{{ player.position }}</span>
+                    {% endif %}
+                    {% if player.team_abbr %}
+                    <span class="team-badge-large">{{ team.team_name if team else player.team_abbr }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="action-buttons">
+                    {% if player.team_abbr %}
+                    <a href="/web/team/{{ player.team_abbr }}" class="btn btn-light btn-action">
+                        <i class="fas fa-users me-2"></i>View Team
+                    </a>
+                    {% endif %}
+                    <button class="btn btn-outline-light btn-action" onclick="sharePlayer()">
+                        <i class="fas fa-share me-2"></i>Share Profile
+                    </button>
+                    <button class="btn btn-outline-light btn-action" onclick="comparePlayer()">
+                        <i class="fas fa-balance-scale me-2"></i>Compare Players
+                    </button>
+                </div>
+            </div>
+            <div class="col-auto text-end d-none d-md-block">
+                {% if player.jersey_number %}
+                <div class="display-3 fw-bold">#{{ player.jersey_number }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="container">
+    <div class="row">
+        <!-- Left Column - Basic Info and Stats -->
+        <div class="col-lg-8">
+            <!-- Quick Stats -->
+            <div class="row g-3 mb-4">
+                {% if player.age %}
+                <div class="col-md-3">
+                    <div class="stat-box">
+                        <div class="stat-number">{{ player.age }}</div>
+                        <div class="stat-label">Years Old</div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if player.years_exp is not none %}
+                <div class="col-md-3">
+                    <div class="stat-box">
+                        <div class="stat-number">{{ player.years_exp }}</div>
+                        <div class="stat-label">NFL Experience</div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if player.height %}
+                <div class="col-md-3">
+                    <div class="stat-box">
+                        <div class="stat-number">{{ (player.height // 12) }}'{{ (player.height % 12) }}"</div>
+                        <div class="stat-label">Height</div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if player.weight %}
+                <div class="col-md-3">
+                    <div class="stat-box">
+                        <div class="stat-number">{{ player.weight }}</div>
+                        <div class="stat-label">Weight (lbs)</div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Performance Overview -->
+            <div class="info-card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>Season Performance
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if player_stats %}
+                    <div class="row g-3">
+                        {% for stat in player_stats %}
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="h4 text-primary">{{ stat.value }}</div>
+                                <div class="small text-muted">{{ stat.label }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-chart-line fa-3x mb-3"></i>
+                        <h6>Performance Stats Coming Soon</h6>
+                        <p class="mb-0">Individual player statistics will be available once play-by-play data is fully processed.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Recent Games -->
+            {% if recent_games %}
+            <div class="info-card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>Recent Games
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="recent-games">
+                        {% for game in recent_games %}
+                        <div class="game-item" onclick="window.location.href='/web/game/{{ game.game_id }}'">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <div class="fw-bold">
+                                        {% if game.home_team == player.team_abbr %}
+                                        vs {{ game.away_team }}
+                                        {% else %}
+                                        @ {{ game.home_team }}
+                                        {% endif %}
+                                    </div>
+                                    <small class="text-muted">{{ game.game_date.strftime("%b %d, %Y") }}</small>
+                                </div>
+                                <div class="col-auto">
+                                    {% if game.home_score is not none and game.away_score is not none %}
+                                    <span class="game-result {{ 'win' if ((game.home_team == player.team_abbr and game.home_score > game.away_score) or (game.away_team == player.team_abbr and game.away_score > game.home_score)) else 'loss' }}">
+                                        {{ 'W' if ((game.home_team == player.team_abbr and game.home_score > game.away_score) or (game.away_team == player.team_abbr and game.away_score > game.home_score)) else 'L' }}
+                                    </span>
+                                    <div class="small">{{ game.home_score }}-{{ game.away_score }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Right Column - Player Details -->
+        <div class="col-lg-4">
+            <!-- Personal Information -->
+            <div class="info-card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user me-2"></i>Player Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% if player.college %}
+                        <div class="col-12">
+                            <div class="small text-muted">College</div>
+                            <div class="fw-bold">{{ player.college }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if player.rookie_year %}
+                        <div class="col-6">
+                            <div class="small text-muted">Rookie Year</div>
+                            <div class="fw-bold">{{ player.rookie_year }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if player.draft_year %}
+                        <div class="col-6">
+                            <div class="small text-muted">Draft Year</div>
+                            <div class="fw-bold">{{ player.draft_year }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if player.draft_round and player.draft_pick %}
+                        <div class="col-12">
+                            <div class="small text-muted">Draft Position</div>
+                            <div class="fw-bold">Round {{ player.draft_round }}, Pick {{ player.draft_pick }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if player.draft_team and player.draft_team != player.team_abbr %}
+                        <div class="col-12">
+                            <div class="small text-muted">Drafted By</div>
+                            <div class="fw-bold">{{ player.draft_team }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="col-12">
+                            <div class="small text-muted">Status</div>
+                            <div class="fw-bold text-capitalize">{{ player.status or 'Active' }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Career Timeline -->
+            {% if career_events %}
+            <div class="info-card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-timeline me-2"></i>Career Highlights
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="career-timeline">
+                        {% for event in career_events %}
+                        <div class="timeline-item">
+                            <div class="timeline-year">{{ event.year }}</div>
+                            <div class="timeline-event">{{ event.description }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Similar Players -->
+            {% if similar_players %}
+            <div class="comparison-section">
+                <h6 class="mb-3">
+                    <i class="fas fa-users me-2"></i>Similar Players
+                </h6>
+                {% for similar in similar_players %}
+                <div class="d-flex align-items-center mb-2">
+                    <div class="flex-grow-1">
+                        <a href="/web/player/{{ similar.player_id }}" class="text-white text-decoration-none">
+                            {{ similar.full_name }}
+                        </a>
+                        <div class="small opacity-75">{{ similar.position }} • {{ similar.team_abbr }}</div>
+                    </div>
+                    <div class="small opacity-75">
+                        {{ similar.similarity_score }}% match
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Back to Players Button -->
+<div class="container mt-4">
+    <div class="text-center">
+        <a href="/web/players" class="btn btn-outline-primary btn-lg">
+            <i class="fas fa-arrow-left me-2"></i>Back to Players Directory
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function sharePlayer() {
+    if (navigator.share) {
+        navigator.share({
+            title: '{{ player.full_name }} - NFL Player Profile',
+            text: 'Check out {{ player.full_name }}\'s NFL player profile on NFL Analysis Engine',
+            url: window.location.href
+        });
+    } else {
+        // Fallback: copy to clipboard
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            alert('Player profile link copied to clipboard!');
+        });
+    }
+}
+
+function comparePlayer() {
+    // Redirect to comparison tool with this player pre-selected
+    window.location.href = '/web/compare/players?player1={{ player.player_id }}';
+}
+
+// Add smooth scrolling for internal links
+document.addEventListener('DOMContentLoaded', function() {
+    // Highlight navigation
+    const currentPath = window.location.pathname;
+    document.querySelectorAll('.nav-link').forEach(link => {
+        if (link.getAttribute('href') === '/web/players') {
+            link.classList.add('active');
+        }
+    });
+});
+</script>
+{% endblock %}
