@@ -17,9 +17,9 @@ from src.models.game import GameModel as Game
 from src.models.play import PlayModel as Play
 
 
-@pytest.fixture(scope="function")
-def test_db():
-    """Create a temporary test database."""
+@pytest.fixture(scope="session")
+def test_engine():
+    """Create a test database engine for the session."""
     # Create temporary file for SQLite database
     db_fd, db_path = tempfile.mkstemp(suffix='.db')
     
@@ -28,31 +28,41 @@ def test_db():
         f"sqlite:///{db_path}",
         poolclass=StaticPool,
         connect_args={"check_same_thread": False},
-        echo=False
+        echo=False,
+        pool_pre_ping=True  # Verify connections before use
     )
     
     # Create all tables
     Base.metadata.create_all(bind=engine)
     
-    # Create session maker
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    yield engine
     
-    try:
-        yield TestingSessionLocal, engine
-    finally:
-        # Cleanup
-        os.close(db_fd)
-        os.unlink(db_path)
+    # Cleanup
+    engine.dispose()
+    os.close(db_fd)
+    os.unlink(db_path)
+
+
+@pytest.fixture(scope="function") 
+def test_db(test_engine):
+    """Create session maker from engine."""
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+    yield TestingSessionLocal, test_engine
 
 
 @pytest.fixture(scope="function")
 def test_session(test_db):
-    """Create a test database session."""
+    """Create a test database session with proper cleanup."""
     TestingSessionLocal, engine = test_db
     session = TestingSessionLocal()
     try:
         yield session
     finally:
+        # Ensure proper cleanup - rollback any pending transactions
+        try:
+            session.rollback()
+        except Exception:
+            pass
         session.close()
 
 
@@ -61,12 +71,15 @@ def test_client(test_session):
     """Create a test client with database session override."""
     
     def override_get_db_session():
-        """Override database session dependency."""
+        """Override database session dependency with proper transaction handling."""
         try:
             yield test_session
-        except Exception:
-            test_session.rollback()
-            raise
+        except Exception as e:
+            try:
+                test_session.rollback()
+            except Exception:
+                pass  # Ignore rollback errors during cleanup
+            raise e
     
     # Create app without database middleware for testing
     from fastapi import FastAPI

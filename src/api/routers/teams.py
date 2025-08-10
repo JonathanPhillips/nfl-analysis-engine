@@ -3,11 +3,13 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
 import logging
 from pydantic import BaseModel, Field
 
-from ...models.team import TeamModel as Team, TeamResponse
+from ...models.team import TeamResponse
+from ...services.dependencies import team_service_dependency
+from ...services.team_service import TeamService
+from ...services.base import NotFoundError, DatabaseError, ServiceException
 from ..dependencies import get_db_session
 
 logger = logging.getLogger(__name__)
@@ -32,13 +34,11 @@ async def get_teams(
 ):
     """Get list of NFL teams."""
     try:
-        query = db.query(Team)
+        team_service = TeamService(db)
         
-        # Get total count
-        total = query.count()
-        
-        # Apply pagination
-        teams = query.offset(offset).limit(limit).all()
+        # Get teams and total count
+        teams = team_service.list(limit=limit, offset=offset, order_by="team_name")
+        total = team_service.count()
         
         return TeamList(
             teams=[TeamResponse.model_validate(team) for team in teams],
@@ -47,7 +47,7 @@ async def get_teams(
             offset=offset
         )
     
-    except SQLAlchemyError as e:
+    except DatabaseError as e:
         logger.error(f"Database error in get_teams: {str(e)}")
         raise HTTPException(status_code=500, detail="Database error")
     except Exception as e:
@@ -62,16 +62,14 @@ async def get_team(
 ):
     """Get a specific team by abbreviation."""
     try:
-        team = db.query(Team).filter(Team.team_abbr == team_abbr.upper()).first()
-        
-        if not team:
-            raise HTTPException(status_code=404, detail=f"Team {team_abbr} not found")
+        team_service = TeamService(db)
+        team = team_service.get_by_abbreviation_or_404(team_abbr)
         
         return TeamResponse.model_validate(team)
     
-    except HTTPException:
-        raise
-    except SQLAlchemyError as e:
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except DatabaseError as e:
         logger.error(f"Database error in get_team: {str(e)}")
         raise HTTPException(status_code=500, detail="Database error")
     except Exception as e:
@@ -87,30 +85,17 @@ async def get_team_stats(
 ):
     """Get team statistics for a specific season."""
     try:
-        team = db.query(Team).filter(Team.team_abbr == team_abbr.upper()).first()
+        team_service = TeamService(db)
+        stats = team_service.get_team_stats(team_abbr, season)
         
-        if not team:
-            raise HTTPException(status_code=404, detail=f"Team {team_abbr} not found")
-        
-        # For now, return basic team info with placeholder stats
-        # TODO: Implement actual statistics calculation from games and plays
-        stats = {
-            "team": TeamResponse.model_validate(team),
-            "season": season,
-            "games_played": 0,
-            "wins": 0,
-            "losses": 0,
-            "ties": 0,
-            "points_for": 0,
-            "points_against": 0,
-            "message": "Statistics calculation not yet implemented"
-        }
+        # Convert team object to response model
+        stats["team"] = TeamResponse.model_validate(stats["team"])
         
         return stats
     
-    except HTTPException:
-        raise
-    except SQLAlchemyError as e:
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except DatabaseError as e:
         logger.error(f"Database error in get_team_stats: {str(e)}")
         raise HTTPException(status_code=500, detail="Database error")
     except Exception as e:
