@@ -25,7 +25,7 @@ def train_optimized_model():
     logger.info("Starting optimized model training...")
     
     # Get database session
-    db = next(get_session())
+    db = get_session()()
     
     try:
         # Initialize optimized predictor
@@ -104,7 +104,7 @@ def test_predictions():
     """Test the optimized model with sample predictions."""
     logger.info("Testing optimized model predictions...")
     
-    db = next(get_session())
+    db = get_session()()
     
     try:
         predictor = OptimizedNFLPredictor(db)

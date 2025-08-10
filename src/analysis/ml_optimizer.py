@@ -32,6 +32,7 @@ from .features import FeatureEngineer
 from .models import NFLPredictor, ModelMetrics, Prediction
 from ..models.game import GameModel
 from ..models.play import PlayModel
+from ..models.team import TeamModel
 
 logger = logging.getLogger(__name__)
 
@@ -314,7 +315,7 @@ class EnhancedFeatureEngineer(FeatureEngineer):
         team2_info = self.db_session.query(TeamModel).filter_by(team_abbr=team2).first()
         
         if team1_info and team2_info:
-            return team1_info.division == team2_info.division
+            return team1_info.team_division == team2_info.team_division
         return False
     
     def _is_conference_game(self, team1: str, team2: str) -> bool:
@@ -323,7 +324,7 @@ class EnhancedFeatureEngineer(FeatureEngineer):
         team2_info = self.db_session.query(TeamModel).filter_by(team_abbr=team2).first()
         
         if team1_info and team2_info:
-            return team1_info.conference == team2_info.conference
+            return team1_info.team_conf == team2_info.team_conf
         return False
     
     def _get_division_record(self, team: str, season: int, end_date: date) -> float:
@@ -333,7 +334,7 @@ class EnhancedFeatureEngineer(FeatureEngineer):
             return 0.5
         
         division_teams = self.db_session.query(TeamModel.team_abbr).filter_by(
-            division=team_info.division
+            team_division=team_info.team_division
         ).all()
         division_teams = [t[0] for t in division_teams if t[0] != team]
         
