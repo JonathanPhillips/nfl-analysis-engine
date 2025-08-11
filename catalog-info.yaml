@@ -9,7 +9,7 @@ metadata:
     and advanced machine learning predictions using ensemble methods.
   annotations:
     github.com/project-slug: nfl-analysis-engine
-    backstage.io/techdocs-ref: dir:.
+    # backstage.io/techdocs-ref: dir:.  # Temporarily disabled until MkDocs is installed
   tags:
     - nfl
     - sports-analytics
