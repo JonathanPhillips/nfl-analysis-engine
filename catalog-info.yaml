@@ -38,33 +38,35 @@ spec:
   dependsOn:
     - resource:nfl-database
     - resource:ml-models
-  providesApis:
-    - nfl-analysis-api
+  # providesApis:
+  #   - nfl-analysis-api  # Temporarily removed until API is deployed
   consumesApis:
     - nfl-data-py
     - nflfastr
 
----
-apiVersion: backstage.io/v1alpha1
-kind: API
-metadata:
-  name: nfl-analysis-api
-  title: NFL Analysis API
-  description: >
-    RESTful API providing comprehensive NFL data access, team analytics, 
-    player statistics, game predictions, and advanced metrics including EPA and WP.
-  tags:
-    - rest-api
-    - nfl-data
-    - sports-analytics
-    - predictions
-spec:
-  type: openapi
-  lifecycle: production
-  owner: data-engineering-team
-  system: sports-analytics-platform
-  definition:
-    $text: http://localhost:8000/openapi.json
+# API spec temporarily removed for Backstage registration
+# Will be re-added once service is deployed and accessible
+# ---
+# apiVersion: backstage.io/v1alpha1
+# kind: API
+# metadata:
+#   name: nfl-analysis-api
+#   title: NFL Analysis API
+#   description: >
+#     RESTful API providing comprehensive NFL data access, team analytics, 
+#     player statistics, game predictions, and advanced metrics including EPA and WP.
+#   tags:
+#     - rest-api
+#     - nfl-data
+#     - sports-analytics
+#     - predictions
+# spec:
+#   type: openapi
+#   lifecycle: production
+#   owner: data-engineering-team
+#   system: sports-analytics-platform
+#   definition:
+#     $text: http://localhost:8000/openapi.json
 
 ---
 apiVersion: backstage.io/v1alpha1
