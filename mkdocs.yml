@@ -1,0 +1,54 @@
+site_name: NFL Analysis Engine
+site_description: Professional-grade NFL data analysis and prediction platform
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Configuration: getting-started/configuration.md
+  - Architecture:
+    - Overview: architecture/overview.md
+    - Service Layer: architecture/service-layer.md
+    - Database Schema: architecture/database.md
+    - ML Models: architecture/ml-models.md
+  - API Reference:
+    - Teams: api/teams.md
+    - Players: api/players.md
+    - Games: api/games.md
+    - Predictions: api/predictions.md
+  - Features:
+    - Team Analytics: features/team-analytics.md
+    - Player Statistics: features/player-stats.md
+    - ML Predictions: features/predictions.md
+    - Position Analytics: features/position-analytics.md
+  - Development:
+    - Setup: development/setup.md
+    - Testing: development/testing.md
+    - Contributing: development/contributing.md
+
+theme:
+  name: material
+  palette:
+    primary: indigo
+    accent: blue
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+
+plugins:
+  - search
+  - techdocs-core
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.details
+  - pymdownx.snippets
+  - tables
