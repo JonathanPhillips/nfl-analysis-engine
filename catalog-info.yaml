@@ -1,0 +1,142 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: nfl-analysis-engine
+  title: NFL Analysis Engine
+  description: >
+    Professional-grade NFL data analysis and prediction platform with 75% ML accuracy.
+    Features comprehensive team analytics, player statistics, play-by-play analysis,
+    and advanced machine learning predictions using ensemble methods.
+  annotations:
+    github.com/project-slug: nfl-analysis-engine
+    backstage.io/techdocs-ref: dir:.
+  tags:
+    - nfl
+    - sports-analytics
+    - machine-learning
+    - fastapi
+    - postgresql
+    - python
+    - data-science
+    - predictions
+    - statistics
+  links:
+    - url: http://localhost:8000
+      title: Application
+      icon: web
+    - url: http://localhost:8000/api/docs
+      title: API Documentation
+      icon: docs
+    - url: http://localhost:8000/web/
+      title: Web Interface
+      icon: dashboard
+spec:
+  type: service
+  lifecycle: production
+  owner: data-engineering-team
+  system: sports-analytics-platform
+  dependsOn:
+    - resource:nfl-database
+    - resource:ml-models
+  providesApis:
+    - nfl-analysis-api
+  consumesApis:
+    - nfl-data-py
+    - nflfastr
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: nfl-analysis-api
+  title: NFL Analysis API
+  description: >
+    RESTful API providing comprehensive NFL data access, team analytics, 
+    player statistics, game predictions, and advanced metrics including EPA and WP.
+  tags:
+    - rest-api
+    - nfl-data
+    - sports-analytics
+    - predictions
+spec:
+  type: openapi
+  lifecycle: production
+  owner: data-engineering-team
+  system: sports-analytics-platform
+  definition:
+    $text: http://localhost:8000/openapi.json
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: nfl-database
+  title: NFL PostgreSQL Database
+  description: >
+    Primary PostgreSQL database containing NFL teams, players, games, and play-by-play data.
+    Compatible with nflfastR schema with 49K+ plays and 949+ players from 2024 season.
+  tags:
+    - postgresql
+    - database
+    - nfl-data
+    - production
+spec:
+  type: database
+  lifecycle: production
+  owner: data-engineering-team
+  system: sports-analytics-platform
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: ml-models
+  title: NFL Prediction Models
+  description: >
+    Machine learning models for NFL game prediction. Includes optimized ensemble 
+    model (RF+XGBoost+GB) achieving 75% accuracy with advanced feature engineering.
+  tags:
+    - machine-learning
+    - models
+    - ensemble
+    - random-forest
+    - xgboost
+    - predictions
+spec:
+  type: ml-model
+  lifecycle: production
+  owner: data-science-team
+  system: sports-analytics-platform
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: sports-analytics-platform
+  title: Sports Analytics Platform
+  description: >
+    Comprehensive sports data analysis platform providing real-time insights,
+    predictions, and analytics for professional sports leagues.
+  tags:
+    - sports-analytics
+    - data-platform
+    - machine-learning
+spec:
+  owner: platform-team
+  domain: sports-data
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: Domain
+metadata:
+  name: sports-data
+  title: Sports Data Domain
+  description: >
+    Domain encompassing all sports-related data products, analytics platforms,
+    and prediction services across various professional sports leagues.
+  tags:
+    - sports
+    - data-domain
+    - analytics
+spec:
+  owner: data-platform-team
