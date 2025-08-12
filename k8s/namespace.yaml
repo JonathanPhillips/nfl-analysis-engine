@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nfl-analysis-engine
+  labels:
+    name: nfl-analysis-engine
+    app.kubernetes.io/name: nfl-analysis-engine
+    app.kubernetes.io/component: namespace

@@ -1,0 +1,116 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgresql-pvc
+  namespace: nfl-analysis-engine
+  labels:
+    app.kubernetes.io/name: nfl-analysis-engine
+    app.kubernetes.io/component: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: "" # Use default storage class
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgresql
+  namespace: nfl-analysis-engine
+  labels:
+    app.kubernetes.io/name: nfl-analysis-engine
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: nfl-analysis-engine
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nfl-analysis-engine
+      app.kubernetes.io/component: database
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nfl-analysis-engine
+        app.kubernetes.io/component: database
+    spec:
+      containers:
+      - name: postgresql
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: nfl-analysis-config
+              key: DB_NAME
+        - name: POSTGRES_USER
+          valueFrom:
+            configMapKeyRef:
+              name: nfl-analysis-config
+              key: DB_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: nfl-analysis-secrets
+              key: DB_PASSWORD
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgresql-storage
+          mountPath: /var/lib/postgresql/data
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+          initialDelaySeconds: 5
+          timeoutSeconds: 3
+          periodSeconds: 5
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: postgresql-storage
+        persistentVolumeClaim:
+          claimName: postgresql-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql-service
+  namespace: nfl-analysis-engine
+  labels:
+    app.kubernetes.io/name: nfl-analysis-engine
+    app.kubernetes.io/component: database
+spec:
+  selector:
+    app.kubernetes.io/name: nfl-analysis-engine
+    app.kubernetes.io/component: database
+  ports:
+  - port: 5432
+    targetPort: 5432
+    name: postgres
+  type: ClusterIP

@@ -1,0 +1,167 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfl-models-pvc
+  namespace: nfl-analysis-engine
+  labels:
+    app.kubernetes.io/name: nfl-analysis-engine
+    app.kubernetes.io/component: application
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: "" # Use default storage class
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfl-analysis-app
+  namespace: nfl-analysis-engine
+  labels:
+    app.kubernetes.io/name: nfl-analysis-engine
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: nfl-analysis-engine
+    app.kubernetes.io/version: "1.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nfl-analysis-engine
+      app.kubernetes.io/component: application
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nfl-analysis-engine
+        app.kubernetes.io/component: application
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      initContainers:
+      - name: wait-for-db
+        image: postgres:15-alpine
+        command: ['sh', '-c', 'until pg_isready -h postgresql-service -p 5432 -U nfl_user; do echo waiting for database; sleep 2; done;']
+        env:
+        - name: PGUSER
+          valueFrom:
+            configMapKeyRef:
+              name: nfl-analysis-config
+              key: DB_USER
+      containers:
+      - name: nfl-analysis-app
+        image: nfl-analysis-engine:latest
+        imagePullPolicy: Never  # For local development
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: nfl-analysis-secrets
+              key: DATABASE_URL
+        - name: API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: nfl-analysis-secrets
+              key: API_KEY
+        envFrom:
+        - configMapRef:
+            name: nfl-analysis-config
+        volumeMounts:
+        - name: models-storage
+          mountPath: /app/models
+        - name: data-storage
+          mountPath: /app/data
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: models-storage
+        persistentVolumeClaim:
+          claimName: nfl-models-pvc
+      - name: data-storage
+        emptyDir: {}
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 1000
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nfl-analysis-service
+  namespace: nfl-analysis-engine
+  labels:
+    app.kubernetes.io/name: nfl-analysis-engine
+    app.kubernetes.io/component: application
+spec:
+  selector:
+    app.kubernetes.io/name: nfl-analysis-engine
+    app.kubernetes.io/component: application
+  ports:
+  - port: 80
+    targetPort: 8000
+    name: http
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nfl-analysis-ingress
+  namespace: nfl-analysis-engine
+  labels:
+    app.kubernetes.io/name: nfl-analysis-engine
+    app.kubernetes.io/component: ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: nfl-analysis.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nfl-analysis-service
+            port:
+              number: 80

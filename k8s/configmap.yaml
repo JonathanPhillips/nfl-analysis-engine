@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nfl-analysis-config
+  namespace: nfl-analysis-engine
+  labels:
+    app.kubernetes.io/name: nfl-analysis-engine
+    app.kubernetes.io/component: configuration
+data:
+  PYTHONPATH: "/app"
+  ENVIRONMENT: "production"
+  DEBUG: "false"
+  HOST: "0.0.0.0"
+  PORT: "8000"
+  
+  # Database configuration
+  DB_HOST: "postgresql-service"
+  DB_PORT: "5432"
+  DB_NAME: "nfl_analysis"
+  DB_USER: "nfl_user"
+  
+  # ML Model configuration
+  ML_MODEL_PATH: "/app/models/"
+  DEFAULT_MODEL: "nfl_predictor_optimized.pkl"
+  FEATURE_CACHE_TTL: "3600"
+  ENABLE_FEATURE_CACHING: "true"
