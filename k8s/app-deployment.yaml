@@ -13,7 +13,7 @@ spec:
   resources:
     requests:
       storage: 5Gi
-  storageClassName: "" # Use default storage class
+  storageClassName: "local-storage" # Use home cluster storage class
 
 ---
 apiVersion: apps/v1
@@ -55,7 +55,7 @@ spec:
       containers:
       - name: nfl-analysis-app
         image: nfl-analysis-engine:latest
-        imagePullPolicy: Never  # For local development
+        imagePullPolicy: Always  # Pull from home registry
         ports:
         - containerPort: 8000
           name: http
@@ -135,9 +135,10 @@ spec:
   ports:
   - port: 80
     targetPort: 8000
+    nodePort: 30083  # Use available port from range 30083-30089
     name: http
     protocol: TCP
-  type: ClusterIP
+  type: NodePort
 
 ---
 apiVersion: networking.k8s.io/v1
@@ -153,7 +154,7 @@ metadata:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
 spec:
-  ingressClassName: nginx
+  ingressClassName: traefik
   rules:
   - host: nfl-analysis.local
     http:

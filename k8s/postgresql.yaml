@@ -13,7 +13,7 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  storageClassName: "" # Use default storage class
+  storageClassName: "local-storage" # Use home cluster storage class
 
 ---
 apiVersion: apps/v1
